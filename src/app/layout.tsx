@@ -4,9 +4,12 @@ import { cookies } from "next/headers";
 import { LocaleProvider, type Locale } from "@/i18n/LocaleProvider";
 import "./globals.css";
 
+// Loaded without a `weight` list so next/font serves the variable font the
+// prototype links from Google Fonts, optical-size axis included. Pinning
+// weights ships static cuts instead, which drops `opsz` and renders the
+// display design at 10-13px, where the small-size cut belongs.
 const serif = Source_Serif_4({
   subsets: ["latin"],
-  weight: ["400", "600", "700"],
   style: ["normal", "italic"],
   variable: "--font-serif",
   display: "swap",
@@ -29,8 +32,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const locale = (store.get("chl_locale")?.value === "EN" ? "EN" : "ID") as Locale;
 
   return (
-    <html lang={locale === "EN" ? "en" : "id"}>
-      <body className={`${serif.variable} ${mono.variable}`}>
+    /* The font variables belong on <html>: globals.css builds --sans and --mono
+       out of them on :root, and a custom property that references an undefined
+       one is invalid at computed-value time — it resolves to nothing, and every
+       screen silently falls back to Times New Roman. */
+    <html lang={locale === "EN" ? "en" : "id"} className={`${serif.variable} ${mono.variable}`}>
+      <body>
         <LocaleProvider initialLocale={locale}>{children}</LocaleProvider>
       </body>
     </html>

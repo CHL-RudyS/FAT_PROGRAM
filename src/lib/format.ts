@@ -98,3 +98,16 @@ export function humanizeEnum(value: string): string {
   const text = value.replace(/_/g, " ").toLowerCase();
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+/**
+ * Names are stored the way they are written on the payroll — in capitals.
+ * That reads as shouting at small sizes, so the compact user chip renders
+ * them as a name instead: "KARTIKA PUTRI" -> "Kartika Putri". Left alone
+ * when the text is already mixed case, so "PT" or "bin" survive as typed.
+ */
+export function titleCase(value: string): string {
+  if (value !== value.toUpperCase()) return value;
+  return value
+    .toLowerCase()
+    .replace(/(^|[\s'’(-])([a-zà-ÿ])/g, (_match, before: string, letter: string) => before + letter.toUpperCase());
+}

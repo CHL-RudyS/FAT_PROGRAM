@@ -2,9 +2,19 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/i18n/LocaleProvider";
-import { BackdropWaves, IconChevronDown, IconHelp, IconBell, IconSearch } from "@/components/shell/icons";
+import { titleCase } from "@/lib/format";
+import SettingsDialog from "@/components/ui/SettingsDialog";
+import {
+  BackdropWaves,
+  IconChevronDown,
+  IconHelp,
+  IconBell,
+  IconGear,
+  IconLogout,
+  IconSearch,
+} from "@/components/shell/icons";
 
 export type CompanyOption = {
   id: string;
@@ -24,13 +34,27 @@ export type UnitOption = {
 
 const MEGA_TABS = ["Beranda", "Transaksi", "Mitra", "Laporan", "Manajemen"];
 
+const userMenuItem: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 7,
+  width: "100%",
+  textAlign: "left",
+  padding: "8px 11px",
+  borderRadius: 8,
+  fontSize: 12.5,
+  fontWeight: 500,
+  color: "var(--ink)",
+  whiteSpace: "nowrap",
+};
+
 export default function PerusahaanScreen({
   companies,
   user,
   lastLogin,
 }: {
   companies: CompanyOption[];
-  user: { name: string; roleName: string; initials: string };
+  user: { name: string; email: string; roleName: string; initials: string };
   lastLogin: string;
 }) {
   const router = useRouter();
@@ -40,6 +64,31 @@ export default function PerusahaanScreen({
   const [picked, setPicked] = useState<CompanyOption | null>(null);
   const [units, setUnits] = useState<UnitOption[]>([]);
   const [busy, setBusy] = useState(false);
+  const [userMenu, setUserMenu] = useState(false);
+  const [settings, setSettings] = useState(false);
+
+  useEffect(() => {
+    if (!userMenu) return;
+    const close = () => setUserMenu(false);
+    const onDown = (event: MouseEvent) => {
+      if (!(event.target as HTMLElement).closest("[data-menu-root]")) close();
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [userMenu]);
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/login");
+    router.refresh();
+  }
 
   const visibleCompanies = useMemo(() => {
     const query = companyQuery.trim().toLowerCase();
@@ -116,32 +165,90 @@ export default function PerusahaanScreen({
                 <IconBell />
               </button>
               <span style={{ display: "block", width: 1, height: 24, background: "var(--rule)" }} />
-              <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "4px 6px 4px 4px", width: 136, flex: "none", borderRadius: 9, color: "var(--ink)" }}>
-                <span
+              <div data-menu-root style={{ position: "relative" }}>
+                <button
+                  onClick={() => setUserMenu((open) => !open)}
+                  aria-haspopup="menu"
+                  aria-expanded={userMenu}
                   style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: "50%",
-                    background: "var(--ledger)",
-                    color: "#fff",
-                    display: "grid",
-                    placeItems: "center",
-                    fontSize: 11.5,
-                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 9,
+                    padding: "4px 6px 4px 4px",
+                    width: 136,
                     flex: "none",
+                    borderRadius: 9,
+                    color: "var(--ink)",
+                    background: userMenu ? "var(--sunk)" : undefined,
                   }}
                 >
-                  {user.initials}
-                </span>
-                <span style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {user.name}
+                  <span
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: "50%",
+                      background: "var(--ledger)",
+                      color: "#fff",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      flex: "none",
+                    }}
+                  >
+                    {user.initials}
                   </span>
-                  <span style={{ display: "block", fontSize: 11, color: "var(--ink3)", lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {t(user.roleName)}
+                  <span style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {titleCase(user.name)}
+                    </span>
+                    <span style={{ display: "block", fontSize: 11, color: "var(--ink3)", lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {t(user.roleName)}
+                    </span>
                   </span>
-                </span>
-                <IconChevronDown size={14} stroke="var(--ink3)" />
+                  <IconChevronDown size={14} stroke="var(--ink3)" />
+                </button>
+
+                {userMenu && (
+                  <div
+                    role="menu"
+                    style={{
+                      position: "absolute",
+                      right: 0,
+                      top: "calc(100% + 8px)",
+                      minWidth: "100%",
+                      width: "max-content",
+                      background: "rgba(244,246,242,.94)",
+                      backdropFilter: "blur(10px)",
+                      WebkitBackdropFilter: "blur(10px)",
+                      border: "1px solid var(--rule)",
+                      borderRadius: 12,
+                      boxShadow: "0 14px 34px rgba(22,32,27,.16)",
+                      padding: 5,
+                      zIndex: 44,
+                    }}
+                  >
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setUserMenu(false);
+                        setSettings(true);
+                      }}
+                      style={userMenuItem}
+                    >
+                      <IconGear />
+                      {t("Pengaturan")}
+                    </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => void logout()}
+                      style={{ ...userMenuItem, color: "var(--brick)", borderTop: "1px solid var(--rule)", marginTop: 3 }}
+                    >
+                      <IconLogout />
+                      {t("Keluar")}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -426,6 +533,12 @@ export default function PerusahaanScreen({
             </div>
           </div>
         )}
+
+      <SettingsDialog
+        open={settings}
+        onClose={() => setSettings(false)}
+        user={{ name: user.name, email: user.email, initials: user.initials }}
+      />
 
       <style>{`.unit-card:hover{border-color:var(--ledger)!important;background:var(--paper)!important}`}</style>
     </div>

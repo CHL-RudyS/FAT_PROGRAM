@@ -729,6 +729,12 @@ const SCREEN_ID_EN: Record<string, string> = {
   'Hapus pengguna': 'Delete user',
   'Kelola pengguna': 'Manage user',
   'Memeriksa…': 'Checking…',
+  'Pilih buku unit bisnis yang ingin Anda kerjakan.': 'Choose the business unit book you want to work in.',
+  'Minimal 8 karakter, huruf + angka': 'At least 8 characters, letters + digits',
+  'Ulangi kata sandi baru': 'Repeat the new password',
+  'Kata sandi berhasil diganti. Sesi di perangkat lain diakhiri.':
+    'Password changed. Sessions on other devices have been ended.',
+  'Kata sandi gagal diganti.': 'Could not change the password.',
   'Menyiapkan ruang kerja…': 'Preparing your workspace…',
   'Non-Aktifkan': 'Deactivate',
   'Aktifkan': 'Activate',

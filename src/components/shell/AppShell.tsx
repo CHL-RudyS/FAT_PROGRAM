@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MODULE_GROUPS, ALL_MODULES, findModuleByPath } from "@/lib/navigation";
 import { useT } from "@/i18n/LocaleProvider";
+import { titleCase } from "@/lib/format";
 import {
   GROUP_ICONS,
   IconAssistant,
@@ -453,7 +454,7 @@ export default function AppShell({ context, children }: { context: ShellContext;
                 </span>
                 <span style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, lineHeight: 1.3, whiteSpace: "nowrap", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {context.user.name}
+                    {titleCase(context.user.name)}
                   </span>
                   <span style={{ display: "block", fontSize: 11, color: "var(--ink3)", lineHeight: 1.3, whiteSpace: "nowrap", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {t(context.user.roleName)}

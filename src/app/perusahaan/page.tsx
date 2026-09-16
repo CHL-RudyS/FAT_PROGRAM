@@ -37,7 +37,7 @@ export default async function PerusahaanPage() {
         colorTag: company.colorTag,
         unitCount: company._count.units,
       }))}
-      user={{ name: user.name, roleName: user.roleName, initials: initialsOf(user.name) }}
+      user={{ name: user.name, email: user.email, roleName: user.roleName, initials: initialsOf(user.name) }}
       lastLogin={formatLogin(record?.lastLoginAt ?? null)}
     />
   );

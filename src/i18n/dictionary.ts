@@ -730,6 +730,7 @@ const SCREEN_ID_EN: Record<string, string> = {
   'Kelola pengguna': 'Manage user',
   'Memeriksa…': 'Checking…',
   'Pilih buku unit bisnis yang ingin Anda kerjakan.': 'Choose the business unit book you want to work in.',
+  'Membuka buku unit…': 'Opening the unit book…',
   'Minimal 8 karakter, huruf + angka': 'At least 8 characters, letters + digits',
   'Ulangi kata sandi baru': 'Repeat the new password',
   'Kata sandi berhasil diganti. Sesi di perangkat lain diakhiri.':

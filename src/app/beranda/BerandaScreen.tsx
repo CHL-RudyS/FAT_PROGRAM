@@ -49,6 +49,7 @@ export default function BerandaScreen({
   todos,
   shortcuts,
   companies,
+  unitsByCompany,
 }: {
   company: { id: string; name: string };
   unit: { id: string; code: string; name: string };
@@ -56,6 +57,7 @@ export default function BerandaScreen({
   todos: BerandaTodo[];
   shortcuts: string[];
   companies: Array<{ id: string; name: string; colorTag: string | null; unitCount: number }>;
+  unitsByCompany: Record<string, Array<{ id: string; code: string; name: string }>>;
 }) {
   const router = useRouter();
   const t = useT();
@@ -123,10 +125,9 @@ export default function BerandaScreen({
     });
   }
 
-  async function loadUnits(companyId: string) {
+  function loadUnits(companyId: string) {
     setPickedCompany(companyId);
-    const res = await fetch(`/api/companies/${companyId}/units`);
-    if (res.ok) setUnits((await res.json()) as Array<{ id: string; code: string; name: string }>);
+    setUnits(unitsByCompany[companyId] ?? []);
   }
 
   async function switchTo(companyId: string, unitId: string) {
@@ -322,7 +323,7 @@ export default function BerandaScreen({
                     {searchHits.map((item) => (
                       <button
                         key={item.id}
-                        onClick={() => void loadUnits(item.id)}
+                        onClick={() => loadUnits(item.id)}
                         style={{
                           display: "flex",
                           alignItems: "center",

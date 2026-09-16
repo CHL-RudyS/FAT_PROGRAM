@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useLocale } from "@/i18n/LocaleProvider";
+import LoadingOverlay, { Spinner } from "@/components/ui/LoadingOverlay";
 
 const VALUES: Array<[string, string]> = [
   ["L", "Living with Integrity"],
@@ -18,15 +19,6 @@ const VALUES: Array<[string, string]> = [
 const ID_FLAG = "linear-gradient(to bottom,#E01020 0 50%,#fff 50% 100%)";
 const EN_FLAG =
   "linear-gradient(#3C3B6E,#3C3B6E) no-repeat top left/50% 50%,repeating-linear-gradient(to bottom,#B22234 0 14.28%,#fff 14.28% 28.56%)";
-
-function Spinner({ size = 15, color = "currentColor" }: { size?: number; color?: string }) {
-  return (
-    <svg className="spin" width={size} height={size} viewBox="0 0 16 16" aria-hidden="true" style={{ flex: "none" }}>
-      <circle cx="8" cy="8" r="6.5" fill="none" stroke={color} strokeOpacity=".25" strokeWidth="2.2" />
-      <path d="M8 1.5A6.5 6.5 0 0 1 14.5 8" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
-    </svg>
-  );
-}
 
 function formatLastLogin(date: Date, locale: "ID" | "EN") {
   const months =
@@ -417,40 +409,7 @@ export default function LoginScreen({ nextPath }: { nextPath: string }) {
 
       {/* The company picker is server-rendered, so this covers the gap between
           a verified password and the screen that replaces this one. */}
-      {phase === "masuk" && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 80,
-            display: "grid",
-            placeItems: "center",
-            background: "rgba(234,243,248,.5)",
-            backdropFilter: "blur(2px)",
-            WebkitBackdropFilter: "blur(2px)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 11,
-              padding: "14px 22px",
-              borderRadius: 13,
-              background: "rgba(255,255,255,.92)",
-              border: "1px solid var(--rule)",
-              boxShadow: "0 18px 40px -20px rgba(22,32,27,.4)",
-              fontSize: 13.5,
-              color: "var(--ink2)",
-            }}
-          >
-            <Spinner size={18} color="var(--ledger)" />
-            {t("Menyiapkan ruang kerja…")}
-          </div>
-        </div>
-      )}
+      {phase === "masuk" && <LoadingOverlay label={t("Menyiapkan ruang kerja…")} />}
     </div>
   );
 }

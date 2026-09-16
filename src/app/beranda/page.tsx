@@ -9,7 +9,7 @@ export default async function BerandaPage() {
   const context = await getActiveContext();
   if (!context) redirect("/perusahaan");
 
-  const [unmatched, draftJournals, companies, saved] = await Promise.all([
+  const [unmatched, draftJournals, companies, units, saved] = await Promise.all([
     db.bankStatementLine.count({
       where: { matchStatus: "BELUM_COCOK", bankAccount: { unitId: context.unitId } },
     }),
@@ -19,8 +19,20 @@ export default async function BerandaPage() {
       orderBy: { name: "asc" },
       select: { id: true, name: true, colorTag: true, _count: { select: { units: true } } },
     }),
+    // Carried with the page so the company switcher lists a company's units
+    // the instant it is clicked — about a hundred short rows in total.
+    db.businessUnit.findMany({
+      where: { isActive: true, company: { isActive: true } },
+      orderBy: { code: "asc" },
+      select: { id: true, companyId: true, code: true, name: true },
+    }),
     db.systemSetting.findUnique({ where: { key: `shortcuts:${context.user.id}` } }),
   ]);
+
+  const unitsByCompany: Record<string, Array<{ id: string; code: string; name: string }>> = {};
+  for (const { companyId, ...unit } of units) {
+    (unitsByCompany[companyId] ??= []).push(unit);
+  }
 
   const todos: BerandaTodo[] = [];
   if (unmatched > 0) {
@@ -64,6 +76,7 @@ export default async function BerandaPage() {
         colorTag: company.colorTag,
         unitCount: company._count.units,
       }))}
+      unitsByCompany={unitsByCompany}
     />
   );
 }

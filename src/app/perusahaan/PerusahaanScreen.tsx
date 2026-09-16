@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/i18n/LocaleProvider";
 import { titleCase } from "@/lib/format";
 import SettingsDialog from "@/components/ui/SettingsDialog";
+import LoadingOverlay from "@/components/ui/LoadingOverlay";
 import {
   BackdropWaves,
   IconChevronDown,
@@ -50,10 +51,12 @@ const userMenuItem: React.CSSProperties = {
 
 export default function PerusahaanScreen({
   companies,
+  unitsByCompany,
   user,
   lastLogin,
 }: {
   companies: CompanyOption[];
+  unitsByCompany: Record<string, UnitOption[]>;
   user: { name: string; email: string; roleName: string; initials: string };
   lastLogin: string;
 }) {
@@ -102,11 +105,10 @@ export default function PerusahaanScreen({
     return units.filter((unit) => `${unit.code} ${unit.name}`.toLowerCase().includes(query));
   }, [units, unitQuery]);
 
-  async function pickCompany(company: CompanyOption) {
+  function pickCompany(company: CompanyOption) {
     setPicked(company);
     setUnitQuery("");
-    const res = await fetch(`/api/companies/${company.id}/units`);
-    setUnits(res.ok ? ((await res.json()) as UnitOption[]) : []);
+    setUnits(unitsByCompany[company.id] ?? []);
   }
 
   async function pickUnit(unit: UnitOption) {
@@ -367,7 +369,7 @@ export default function PerusahaanScreen({
                   return (
                     <button
                       key={company.id}
-                      onClick={() => void pickCompany(company)}
+                      onClick={() => pickCompany(company)}
                       style={{
                         display: "flex",
                         alignItems: "flex-start",
@@ -539,6 +541,9 @@ export default function PerusahaanScreen({
         onClose={() => setSettings(false)}
         user={{ name: user.name, email: user.email, initials: user.initials }}
       />
+
+      {/* Picking a unit hands off to the server-rendered module home. */}
+      {busy && <LoadingOverlay label={t("Membuka buku unit…")} />}
 
       <style>{`.unit-card:hover{border-color:var(--ledger)!important;background:var(--paper)!important}`}</style>
     </div>

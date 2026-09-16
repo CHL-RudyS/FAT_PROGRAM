@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push && next build",
+    "build": "prisma generate && (prisma db push || echo '[build] prisma db push gagal \u2014 lanjut build; cek /api/health setelah deploy') && next build",
     "start": "next start",
     "lint": "eslint",
     "db:push": "prisma db push",

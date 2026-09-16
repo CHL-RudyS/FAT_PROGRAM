@@ -6,7 +6,10 @@ import { resolveDatabaseUrl } from "@/lib/db";
  * ever exposing credentials — only the host and booleans/counts.
  */
 export async function GET() {
-  const checks: Record<string, unknown> = {};
+  const checks: Record<string, unknown> = {
+    // Lets you confirm which commit is actually live.
+    commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "local",
+  };
 
   const url = resolveDatabaseUrl();
   checks.databaseUrlSet = Boolean(url);
@@ -65,9 +68,9 @@ export async function GET() {
       );
     }
 
-    // Healthy: report nothing beyond the status, so this public endpoint does
-    // not keep advertising the database host and row counts.
-    return NextResponse.json({ ok: true });
+    // Healthy: report only the status and which commit is live, so this public
+    // endpoint does not keep advertising the database host and row counts.
+    return NextResponse.json({ ok: true, commit: checks.commit });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const missingTable = /does not exist|relation .* does not exist|P2021/i.test(message);

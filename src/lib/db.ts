@@ -18,7 +18,7 @@ export function resolveDatabaseUrl() {
   );
 }
 
-function createClient() {
+function createClient(): PrismaClient {
   const connectionString = resolveDatabaseUrl();
   if (!connectionString) {
     throw new Error(
@@ -28,6 +28,20 @@ function createClient() {
   return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 }
 
-export const db = globalForPrisma.prisma ?? createClient();
+function getClient(): PrismaClient {
+  if (!globalForPrisma.prisma) globalForPrisma.prisma = createClient();
+  return globalForPrisma.prisma;
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
+/**
+ * Connects lazily, on first use. `next build` imports every route module to
+ * collect its configuration, so constructing the client at module scope would
+ * fail the build whenever DATABASE_URL is absent at build time.
+ */
+export const db = new Proxy({} as PrismaClient, {
+  get(_target, property, receiver) {
+    const client = getClient();
+    const value = Reflect.get(client, property, receiver);
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+}) as PrismaClient;

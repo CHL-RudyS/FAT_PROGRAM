@@ -1,22 +1,28 @@
 import { redirect } from "next/navigation";
 import AppShell from "@/components/shell/AppShell";
 import { ToastProvider } from "@/components/ui/Toast";
-import { getCurrentUser } from "@/lib/auth";
+import { getSessionPayload } from "@/lib/auth";
 import { getActiveContext, initialsOf } from "@/lib/context";
 import { db } from "@/lib/db";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  // Reading the cookie costs nothing, and it rules out the two redirect cases
+  // before any query runs — so the remaining lookups can all go out at once.
+  const payload = await getSessionPayload();
+  if (!payload) redirect("/login");
+  if (!payload.companyId || !payload.unitId) redirect("/perusahaan");
 
-  const context = await getActiveContext();
+  const [context, companies] = await Promise.all([
+    getActiveContext(),
+    db.company.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, colorTag: true, _count: { select: { units: true } } },
+    }),
+  ]);
   if (!context) redirect("/perusahaan");
 
-  const companies = await db.company.findMany({
-    where: { isActive: true },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, colorTag: true, _count: { select: { units: true } } },
-  });
+  const user = context.user;
 
   return (
     <AppShell

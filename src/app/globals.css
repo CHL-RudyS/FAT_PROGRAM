@@ -113,6 +113,10 @@ input.num,td input{font-family:var(--mono);text-align:right}
 
 @media(max-width:980px){.grid2,.grid-32{grid-template-columns:1fr}}
 @media(max-width:760px){.row-3,.row-2,.row-4{grid-template-columns:1fr}}
+/* Placeholder blocks shown while a screen's data is still being fetched. */
+@keyframes skeleton{0%,100%{opacity:1}50%{opacity:.5}}
+.sk{background:var(--sunk);border-radius:6px;animation:skeleton 1.3s ease-in-out infinite}
+
 @media(prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 }

@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { requireUser, type CurrentUser } from "@/lib/auth";
+import { getCurrentUser, getSessionPayload, type CurrentUser } from "@/lib/auth";
 
 export type ActiveContext = {
   user: CurrentUser;
@@ -15,14 +15,20 @@ export type ActiveContext = {
  * API route scopes its queries by these ids.
  */
 export async function getActiveContext(): Promise<ActiveContext | null> {
-  const user = await requireUser();
-  if (!user.companyId || !user.unitId) return null;
+  // The company/unit ids live in the signed cookie, so this lookup does not
+  // depend on the user row — the two queries run side by side instead of in
+  // sequence, which halves the database round trips on every screen.
+  const payload = await getSessionPayload();
+  if (!payload?.companyId || !payload.unitId) return null;
 
-  const unit = await db.businessUnit.findFirst({
-    where: { id: user.unitId, companyId: user.companyId },
-    include: { company: { select: { id: true, name: true, colorTag: true } } },
-  });
-  if (!unit) return null;
+  const [user, unit] = await Promise.all([
+    getCurrentUser(),
+    db.businessUnit.findFirst({
+      where: { id: payload.unitId, companyId: payload.companyId },
+      include: { company: { select: { id: true, name: true, colorTag: true } } },
+    }),
+  ]);
+  if (!user || !unit) return null;
 
   return {
     user,

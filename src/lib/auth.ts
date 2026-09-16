@@ -9,6 +9,7 @@ import {
   sessionExpiry,
   signSession,
   verifySession,
+  type SessionPayload,
 } from "@/lib/session";
 
 export type CurrentUser = {
@@ -32,12 +33,19 @@ export function verifyPassword(plain: string, hash: string) {
   return bcrypt.compare(plain, hash);
 }
 
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+/**
+ * Reads and verifies the session cookie without touching the database, so a
+ * caller can learn the company/unit ids before deciding what to query.
+ */
+export async function getSessionPayload(): Promise<SessionPayload | null> {
   const store = await cookies();
   const token = store.get(SESSION_COOKIE)?.value;
   if (!token) return null;
+  return verifySession(token);
+}
 
-  const payload = await verifySession(token);
+export async function getCurrentUser(): Promise<CurrentUser | null> {
+  const payload = await getSessionPayload();
   if (!payload) return null;
 
   const session = await db.session.findUnique({

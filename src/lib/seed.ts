@@ -222,8 +222,7 @@ export async function runSeed(db: PrismaClient) {
 
   const password = await bcrypt.hash("rahasia123", 12);
   const users: Array<[string, string, string, string]> = [
-    ["rudy@kantor.id", "RUDY SUSANTO", "ADMIN", "Administrator Sistem"],
-    ["kartika@kantor.id", "KARTIKA PUTRI WANGSA KUSUMA NINGRAT DIRAJA", "ADMIN", "Kepala Akuntansi"],
+    ["rudy.susanto@ciptaharmoni.com", "RUDY SUSANTO", "ADMIN", "Administrator Sistem"],
     ["bagus@kantor.id", "BAGUS PRASETYO", "AKUNTAN", "Akuntan Senior"],
     ["rina@kantor.id", "RINA MARLINA", "AKUNTAN", "Akuntan"],
     ["sigit@kantor.id", "SIGIT NUGROHO", "REVIEWER", "Reviewer"],

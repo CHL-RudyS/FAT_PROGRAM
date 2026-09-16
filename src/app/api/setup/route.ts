@@ -100,7 +100,8 @@ export async function GET(request: Request) {
     return NextResponse.json({
       ok: true,
       steps,
-      message: "Setup selesai. Login dengan kartika@kantor.id / rahasia123, lalu ganti kata sandinya.",
+      message:
+        "Setup selesai. Login dengan rudy.susanto@ciptaharmoni.com / rahasia123, lalu ganti kata sandinya.",
       created: { users, companies, accounts },
       next: "Hapus SETUP_TOKEN dari environment variables.",
     });

@@ -20,7 +20,7 @@ npm run db:seed               # companies, units, chart of accounts, roles, user
 npm run dev
 ```
 
-Open http://localhost:3000. Sign in with `kartika@kantor.id` / `rahasia123`
+Open http://localhost:3000. Sign in with `rudy.susanto@ciptaharmoni.com` / `rahasia123`
 (Administrator). The seed also creates accountant, reviewer, director and staff accounts
 sharing the same password.
 

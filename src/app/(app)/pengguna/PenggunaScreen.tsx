@@ -82,7 +82,12 @@ export default function PenggunaScreen({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
-  const [editForm, setEditForm] = useState({ roleId: "", status: "AKTIF" as UserRow["status"], unitIds: [] as string[] });
+  const [editForm, setEditForm] = useState({
+    email: "",
+    roleId: "",
+    status: "AKTIF" as UserRow["status"],
+    unitIds: [] as string[],
+  });
 
   const modules = useMemo(() => {
     const groups = new Map<string, PermissionRow[]>();
@@ -136,11 +141,15 @@ export default function PenggunaScreen({
 
   function openEdit(user: UserRow) {
     setEditing(user);
-    setEditForm({ roleId: user.roleId, status: user.status, unitIds: user.unitIds });
+    setEditForm({ email: user.email, roleId: user.roleId, status: user.status, unitIds: user.unitIds });
   }
 
   async function saveEdit() {
     if (!editing) return;
+    if (!editForm.email.trim()) {
+      toast(t("Email harus diisi."));
+      return;
+    }
     // Grants for other entities are not shown here — keep them untouched.
     const otherCompanyUnits = editing.unitIds.filter((id) => !units.some((unit) => unit.id === id));
     const unitIds = [...new Set([...otherCompanyUnits, ...editForm.unitIds])];
@@ -149,7 +158,12 @@ export default function PenggunaScreen({
     const res = await fetch(`/api/users/${editing.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ roleId: editForm.roleId, status: editForm.status, unitIds }),
+      body: JSON.stringify({
+        email: editForm.email.trim(),
+        roleId: editForm.roleId,
+        status: editForm.status,
+        unitIds,
+      }),
     });
     const data = (await res.json()) as { error?: string };
     setBusy(false);
@@ -161,6 +175,28 @@ export default function PenggunaScreen({
 
     setEditing(null);
     toast(t("Akses pengguna tersimpan"));
+    router.refresh();
+  }
+
+  async function removeUser() {
+    if (!editing) return;
+    const confirmed = window.confirm(
+      t("Hapus pengguna ini secara permanen? Tindakan ini tidak bisa dibatalkan."),
+    );
+    if (!confirmed) return;
+
+    setBusy(true);
+    const res = await fetch(`/api/users/${editing.id}`, { method: "DELETE" });
+    const data = (await res.json()) as { error?: string };
+    setBusy(false);
+
+    if (!res.ok) {
+      toast(data.error ?? t("Gagal menghapus pengguna."));
+      return;
+    }
+
+    setEditing(null);
+    toast(t("Pengguna dihapus"));
     router.refresh();
   }
 
@@ -412,12 +448,33 @@ export default function PenggunaScreen({
             <button className="btn" onClick={() => setEditing(null)}>
               {t("Batal")}
             </button>
+            <button
+              className="btn"
+              style={{ color: "var(--brick)", borderColor: "var(--brick)" }}
+              disabled={busy}
+              onClick={() => void removeUser()}
+            >
+              {t("Hapus pengguna")}
+            </button>
             <button className="btn btn-primary" style={{ marginLeft: "auto" }} disabled={busy} onClick={() => void saveEdit()}>
               {busy ? t("Menyimpan…") : t("Simpan")}
             </button>
           </>
         }
       >
+        <div className="row">
+          <div>
+            <label className="f" data-req="1">{t("Email kantor")}</label>
+            <input
+              type="email"
+              value={editForm.email}
+              onChange={(event) => setEditForm((current) => ({ ...current, email: event.target.value }))}
+            />
+            <span className="sm muted">
+              {t("Dipakai untuk login. Mengubahnya tidak memutus sesi yang sedang berjalan.")}
+            </span>
+          </div>
+        </div>
         <div className="row row-2">
           <div>
             <label className="f">{t("Peran")}</label>

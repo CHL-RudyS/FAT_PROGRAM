@@ -726,6 +726,13 @@ const SCREEN_ID_EN: Record<string, string> = {
   'Susun & ajukan laporan khusus': 'Build & submit special reports',
   'Tambah & nonaktifkan pengguna': 'Add & deactivate users',
   'Atur akses pengguna per entitas & cabang': 'Set user access per entity & branch',
+  'Hapus pengguna': 'Delete user',
+  'Pengguna dihapus': 'User deleted',
+  'Gagal menghapus pengguna.': 'Could not delete the user.',
+  'Hapus pengguna ini secara permanen? Tindakan ini tidak bisa dibatalkan.':
+    'Delete this user permanently? This cannot be undone.',
+  'Dipakai untuk login. Mengubahnya tidak memutus sesi yang sedang berjalan.':
+    'Used to sign in. Changing it does not end any active session.',
   'Kelola bagan akun': 'Manage chart of accounts',
   'Buat entitas & cabang baru': 'Create new entities & branches',
   'Kelola template laporan khusus': 'Manage special report templates',

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Dialog from "@/components/ui/Dialog";
 import SettingsDialog from "@/components/ui/SettingsDialog";
+import { MENU_CARD_WIDTH } from "@/components/shell/layout";
 import {
   BackdropWaves,
   GROUP_ICONS,
@@ -239,7 +240,7 @@ export default function BerandaScreen({
           vertical free space, which pushed the whole screen to the middle of
           tall windows instead of sitting under the top edge. */}
       <div className="beranda-row" style={{ width: "100%", maxWidth: 1400, margin: "0 auto", display: "flex", gap: 16, alignItems: "stretch" }}>
-        <div className="beranda-nav" style={{ flex: "0 0 424px", minWidth: 0, display: "flex", alignItems: "flex-end" }}>
+        <div className="beranda-nav" style={{ flex: `0 0 ${MENU_CARD_WIDTH}px`, minWidth: 0, display: "flex", alignItems: "flex-end" }}>
         <div
           style={{
             background: "var(--card)",

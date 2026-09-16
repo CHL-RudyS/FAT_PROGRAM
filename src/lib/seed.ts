@@ -222,6 +222,7 @@ export async function runSeed(db: PrismaClient) {
 
   const password = await bcrypt.hash("rahasia123", 12);
   const users: Array<[string, string, string, string]> = [
+    ["rudy@kantor.id", "RUDY SUSANTO", "ADMIN", "Administrator Sistem"],
     ["kartika@kantor.id", "KARTIKA PUTRI WANGSA KUSUMA NINGRAT DIRAJA", "ADMIN", "Kepala Akuntansi"],
     ["bagus@kantor.id", "BAGUS PRASETYO", "AKUNTAN", "Akuntan Senior"],
     ["rina@kantor.id", "RINA MARLINA", "AKUNTAN", "Akuntan"],
@@ -310,11 +311,14 @@ export async function runSeed(db: PrismaClient) {
     }
   }
 
-  // Grant the administrator access to every unit.
-  const adminId = userRecords.get("kartika@kantor.id")!;
+  // Grant every administrator access to every unit.
+  const adminIds = users
+    .filter(([, , roleCode]) => roleCode === "ADMIN")
+    .map(([email]) => userRecords.get(email))
+    .filter((id): id is string => Boolean(id));
   const allUnits = await db.businessUnit.findMany({ select: { id: true } });
   await db.userUnitAccess.createMany({
-    data: allUnits.map((unit) => ({ userId: adminId, unitId: unit.id, canApprove: true })),
+    data: adminIds.flatMap((userId) => allUnits.map((unit) => ({ userId, unitId: unit.id, canApprove: true }))),
     skipDuplicates: true,
   });
 

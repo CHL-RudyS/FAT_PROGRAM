@@ -727,6 +727,11 @@ const SCREEN_ID_EN: Record<string, string> = {
   'Tambah & nonaktifkan pengguna': 'Add & deactivate users',
   'Atur akses pengguna per entitas & cabang': 'Set user access per entity & branch',
   'Hapus pengguna': 'Delete user',
+  'Kelola pengguna': 'Manage user',
+  'Non-Aktifkan': 'Deactivate',
+  'Aktifkan': 'Activate',
+  'Pengguna dinonaktifkan': 'User deactivated',
+  'Pengguna diaktifkan': 'User activated',
   'Pengguna dihapus': 'User deleted',
   'Gagal menghapus pengguna.': 'Could not delete the user.',
   'Hapus pengguna ini secara permanen? Tindakan ini tidak bisa dibatalkan.':

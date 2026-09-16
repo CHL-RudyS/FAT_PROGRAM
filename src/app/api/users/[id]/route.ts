@@ -144,7 +144,7 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/users/[i
     const trail = await db.auditLog.count({ where: { userId: user.id } });
     if (trail > 0) {
       rule(
-        `Pengguna ini punya ${trail} catatan jejak audit yang harus tetap menyebut namanya, jadi tidak bisa dihapus. Ubah statusnya menjadi Non-Aktif.`,
+        `Pengguna ini sudah pernah memakai sistem — ada ${trail} catatan jejak audit yang harus tetap menyebut pelakunya, jadi akunnya tidak bisa dihapus. Pilih Non-Aktifkan: akunnya tidak bisa dipakai login lagi dan riwayatnya tetap utuh.`,
       );
     }
 

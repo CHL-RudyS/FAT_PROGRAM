@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Dialog from "@/components/ui/Dialog";
 import PageHead from "@/components/ui/PageHead";
 import { useToast } from "@/components/ui/Toast";
@@ -56,6 +56,37 @@ function statusChip(status: UserRow["status"]) {
   return "chip chip-lock";
 }
 
+function IconKebab() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor" aria-hidden="true">
+      <circle cx="7.5" cy="3" r="1.4" />
+      <circle cx="7.5" cy="7.5" r="1.4" />
+      <circle cx="7.5" cy="12" r="1.4" />
+    </svg>
+  );
+}
+
+/** Keeps the action column in view while the entity columns scroll under it. */
+const stickyAction: React.CSSProperties = {
+  position: "sticky",
+  right: 0,
+  background: "var(--card)",
+  boxShadow: "-8px 0 12px -10px rgba(22,32,27,.35)",
+};
+
+const rowMenuItem: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  width: "100%",
+  textAlign: "left",
+  padding: "8px 13px",
+  borderRadius: 8,
+  fontSize: 12.5,
+  fontWeight: 500,
+  color: "var(--ink)",
+  whiteSpace: "nowrap",
+};
+
 export default function PenggunaScreen({
   users,
   roles,
@@ -88,6 +119,33 @@ export default function PenggunaScreen({
     status: "AKTIF" as UserRow["status"],
     unitIds: [] as string[],
   });
+
+  // The row menu is pinned to viewport coordinates rather than rendered inside
+  // the cell: the entity matrix scrolls horizontally, and an absolutely
+  // positioned menu would be clipped by that scroll container.
+  const [menu, setMenu] = useState<{ user: UserRow; top: number; right: number } | null>(null);
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    const onDown = (event: MouseEvent) => {
+      if (!(event.target as HTMLElement).closest("[data-row-menu]")) close();
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", close);
+    // Scrolling would leave the menu behind, so it closes instead of drifting.
+    window.addEventListener("scroll", close, true);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [menu]);
 
   const modules = useMemo(() => {
     const groups = new Map<string, PermissionRow[]>();
@@ -178,15 +236,15 @@ export default function PenggunaScreen({
     router.refresh();
   }
 
-  async function removeUser() {
-    if (!editing) return;
+  async function removeUser(user: UserRow) {
+    setMenu(null);
     const confirmed = window.confirm(
       t("Hapus pengguna ini secara permanen? Tindakan ini tidak bisa dibatalkan."),
     );
     if (!confirmed) return;
 
     setBusy(true);
-    const res = await fetch(`/api/users/${editing.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/users/${user.id}`, { method: "DELETE" });
     const data = (await res.json()) as { error?: string };
     setBusy(false);
 
@@ -198,6 +256,37 @@ export default function PenggunaScreen({
     setEditing(null);
     toast(t("Pengguna dihapus"));
     router.refresh();
+  }
+
+  async function toggleStatus(user: UserRow) {
+    setMenu(null);
+    const next = user.status === "AKTIF" ? "NONAKTIF" : "AKTIF";
+
+    setBusy(true);
+    const res = await fetch(`/api/users/${user.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: next }),
+    });
+    const data = (await res.json()) as { error?: string };
+    setBusy(false);
+
+    if (!res.ok) {
+      toast(data.error ?? t("Gagal menyimpan pengguna."));
+      return;
+    }
+
+    toast(next === "AKTIF" ? t("Pengguna diaktifkan") : t("Pengguna dinonaktifkan"));
+    router.refresh();
+  }
+
+  function openMenu(event: React.MouseEvent<HTMLButtonElement>, user: UserRow) {
+    if (menu?.user.id === user.id) {
+      setMenu(null);
+      return;
+    }
+    const rect = event.currentTarget.getBoundingClientRect();
+    setMenu({ user, top: rect.bottom + 6, right: window.innerWidth - rect.right });
   }
 
   return (
@@ -234,12 +323,19 @@ export default function PenggunaScreen({
                     {company.label}
                   </th>
                 ))}
+                {canManage && (
+                  <th style={{ ...stickyAction, width: 52, textAlign: "right" }}>{t("Aksi")}</th>
+                )}
               </tr>
             </thead>
             <tbody>
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={2 + companies.length} className="sm muted" style={{ padding: "18px 12px" }}>
+                  <td
+                    colSpan={2 + companies.length + (canManage ? 1 : 0)}
+                    className="sm muted"
+                    style={{ padding: "18px 12px" }}
+                  >
                     {t("Belum ada data")}
                   </td>
                 </tr>
@@ -271,6 +367,28 @@ export default function PenggunaScreen({
                       </td>
                     );
                   })}
+                  {canManage && (
+                    <td style={{ ...stickyAction, textAlign: "right", padding: "11px 12px" }}>
+                      <button
+                        data-row-menu
+                        onClick={(event) => openMenu(event, user)}
+                        aria-haspopup="menu"
+                        aria-expanded={menu?.user.id === user.id}
+                        aria-label={t("Kelola pengguna")}
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: 7,
+                          display: "grid",
+                          placeItems: "center",
+                          color: "var(--ink3)",
+                          background: menu?.user.id === user.id ? "var(--sunk)" : undefined,
+                        }}
+                      >
+                        <IconKebab />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -452,7 +570,7 @@ export default function PenggunaScreen({
               className="btn"
               style={{ color: "var(--brick)", borderColor: "var(--brick)" }}
               disabled={busy}
-              onClick={() => void removeUser()}
+              onClick={() => editing && void removeUser(editing)}
             >
               {t("Hapus pengguna")}
             </button>
@@ -533,6 +651,57 @@ export default function PenggunaScreen({
           </div>
         </div>
       </Dialog>
+
+      {menu && (
+        <div
+          data-row-menu
+          role="menu"
+          style={{
+            position: "fixed",
+            top: menu.top,
+            right: menu.right,
+            width: "max-content",
+            minWidth: 168,
+            background: "rgba(244,246,242,.94)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            border: "1px solid var(--rule)",
+            borderRadius: 12,
+            boxShadow: "0 14px 34px rgba(22,32,27,.16)",
+            padding: 5,
+            zIndex: 60,
+          }}
+        >
+          <span
+            className="sm muted"
+            style={{ display: "block", padding: "5px 13px 7px", borderBottom: "1px solid var(--rule)", marginBottom: 4 }}
+          >
+            {menu.user.name}
+          </span>
+          <button
+            role="menuitem"
+            disabled={busy}
+            onClick={() => {
+              openEdit(menu.user);
+              setMenu(null);
+            }}
+            style={rowMenuItem}
+          >
+            {t("Edit")}
+          </button>
+          <button role="menuitem" disabled={busy} onClick={() => void toggleStatus(menu.user)} style={rowMenuItem}>
+            {menu.user.status === "AKTIF" ? t("Non-Aktifkan") : t("Aktifkan")}
+          </button>
+          <button
+            role="menuitem"
+            disabled={busy}
+            onClick={() => void removeUser(menu.user)}
+            style={{ ...rowMenuItem, color: "var(--brick)", borderTop: "1px solid var(--rule)", marginTop: 4 }}
+          >
+            {t("Hapus")}
+          </button>
+        </div>
+      )}
     </>
   );
 }

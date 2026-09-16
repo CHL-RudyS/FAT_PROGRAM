@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { handle, recordAudit, rule } from "@/lib/api";
 import { periodLabel } from "@/lib/format";
-import { assertClosable, journalStateFor } from "../route";
+import { assertClosable, journalStateFor } from "../_lib/shared";
 
 const patchSchema = z.object({
   action: z.enum(["ajukan", "tutup", "kunci", "buka"]),

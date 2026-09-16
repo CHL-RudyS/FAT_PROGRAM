@@ -2,20 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { handle, handleRead, recordAudit, rule } from "@/lib/api";
+import { ACCOUNT_CATEGORIES, ACCOUNT_CODE_PATTERN, ACCOUNT_TYPES, normalBalanceFor } from "./_lib/shared";
 
-/** "Kode akun mengikuti format 4 digit setelah awalan kelompok" (panduan import). */
-export const ACCOUNT_CODE_PATTERN = /^[1-9]-\d{4}$/;
-
-export const ACCOUNT_TYPES = ["ASET", "KEWAJIBAN", "EKUITAS", "PENDAPATAN", "BEBAN"] as const;
-export type AccountTypeValue = (typeof ACCOUNT_TYPES)[number];
-
-/** ASET & BEBAN bersaldo normal debit, sisanya kredit. */
-export function normalBalanceFor(type: AccountTypeValue) {
-  return type === "ASET" || type === "BEBAN" ? "DEBIT" : "KREDIT";
-}
-
-/** Kategori akun pada dialog m-akun -> apakah akun bisa menerima jurnal. */
-export const ACCOUNT_CATEGORIES = ["ANAK", "SUB", "PARENT_SUB", "MAIN"] as const;
 
 const createSchema = z.object({
   code: z.string().trim().min(1, "Kode akun harus diisi.").max(16),

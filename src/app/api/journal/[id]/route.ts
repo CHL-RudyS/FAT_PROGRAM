@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { handle, recordAudit, rule } from "@/lib/api";
 import { toNumber } from "@/lib/format";
-import { requirePostablePeriod, round2 } from "../route";
+import { requirePostablePeriod, round2 } from "../_lib/shared";
 
 const patchSchema = z.object({
   action: z.enum(["posting", "batal"]),

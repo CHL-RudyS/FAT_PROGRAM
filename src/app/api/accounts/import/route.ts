@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { handle, recordAudit, rule } from "@/lib/api";
-import { ACCOUNT_CODE_PATTERN, type AccountTypeValue, normalBalanceFor } from "../route";
+import { ACCOUNT_CODE_PATTERN, type AccountTypeValue, normalBalanceFor } from "../_lib/shared";
 
 const MAX_ROWS = 500;
 

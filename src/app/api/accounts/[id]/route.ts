@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { handle, recordAudit, rule } from "@/lib/api";
-import { ACCOUNT_CATEGORIES, ACCOUNT_CODE_PATTERN, ACCOUNT_TYPES, normalBalanceFor } from "../route";
+import { ACCOUNT_CATEGORIES, ACCOUNT_CODE_PATTERN, ACCOUNT_TYPES, normalBalanceFor } from "../_lib/shared";
 
 const patchSchema = z.object({
   code: z.string().trim().min(1, "Kode akun harus diisi.").max(16).optional(),

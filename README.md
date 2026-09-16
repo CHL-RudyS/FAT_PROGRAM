@@ -1,25 +1,63 @@
-# CODING AGENTS: READ THIS FIRST
+# FAT Program — Modul Akuntansi
 
-This is a **handoff bundle** from Claude Design (claude.ai/design).
+Internal accounting system for PT. Cipta Harmoni Lestari, built from the Claude Design
+prototype in `design/project/FAT PROGRAM.dc.html`.
 
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
+- **Stack:** Next.js 16 (App Router) · React 19 · TypeScript · Prisma 7 · PostgreSQL
+- **Design source of truth:** `design/project/FAT PROGRAM.dc.html` (37 screens) and the
+  design conversation in `design/chats/`
+- **Implementation conventions:** `docs/IMPLEMENTATION-GUIDE.md`
 
-## What you should do — IMPORTANT
+## Running locally
 
-**Read the chat transcripts first.** There are 1 chat transcript(s) in `chats/`. The transcripts show the full back-and-forth between the user and the design assistant — they tell you **what the user actually wants** and **where they landed** after iterating. Don't skip them. The final HTML files are the output, but the chat is where the intent lives.
+Requires Node 20+ and PostgreSQL 14+.
 
-**Read `project/FAT PROGRAM.dc.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+```bash
+npm install
+cp .env.example .env          # then set DATABASE_URL and SESSION_SECRET
+npm run db:push               # create the schema
+npm run db:seed               # companies, units, chart of accounts, roles, users
+npm run dev
+```
 
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
+Open http://localhost:3000. Sign in with `kartika@kantor.id` / `rahasia123`
+(Administrator). The seed also creates accountant, reviewer, director and staff accounts
+sharing the same password.
 
-## About the design files
+`SESSION_SECRET` signs the session cookie — generate one with `openssl rand -base64 32`.
 
-The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
+## How the app is organised
 
-**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
+```
+src/app/login              screen 00 — sign in
+src/app/setup              screen 01 — Set Up module launcher
+src/app/perusahaan         screen 02 — pick company, then business unit
+src/app/beranda            screen 03 — module home
+src/app/(app)/*            screens 04-37 — module screens, wrapped in the app shell
+src/app/api/*              route handlers (auth, context, and one folder per module)
+src/components/shell       left rail, header, module bar, icons
+src/components/ui          Dialog, PageHead, Metrics, Toast
+src/lib                    db, auth, session, active context, api helpers, formatting
+src/i18n                   ID→EN dictionary ported from the prototype, locale provider
+prisma/schema.prisma       data model for every module
+```
 
-## Bundle contents
+Entry screens (00-03) are full-screen, matching the prototype, where each covers the app
+shell entirely. Everything under `(app)` renders inside the persistent shell.
 
-- `README.md` — this file
-- `chats/` — conversation transcripts (read these!)
-- `project/` — the `FAT PROGRAM_1` project files (HTML prototypes, assets, components)
+## Working in the codebase
+
+- A session carries the **active company and business unit**; module screens and APIs scope
+  every query to them via `requireActiveContext()`. Switch context from the header.
+- Money is `Decimal(18,2)` in Postgres. Convert with `toNumber()` before passing to client
+  components, and format with the helpers in `src/lib/format.ts`.
+- Next.js 16 renamed `middleware.ts` to `proxy.ts`; route-handler params are async.
+- Prisma 7 requires a driver adapter — always import the client from `@/lib/db`.
+- The generated Prisma client lives in `src/generated/prisma` (run `npm run db:generate`
+  after changing the schema).
+
+## Language
+
+The interface is Indonesian. `src/i18n/dictionary.ts` carries the English translations
+ported from the prototype; wrap user-visible strings in `t()` from `useT()` so the language
+toggle on the login screen works.

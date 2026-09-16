@@ -1,0 +1,968 @@
+// FAT PROGRAM — Modul Akuntansi PT. Cipta Harmoni Lestari
+// Schema derived from the Claude Design prototype in design/project/FAT PROGRAM.dc.html
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Pengguna & akses ────────────────────────────────────────
+
+enum UserStatus {
+  AKTIF
+  NONAKTIF
+  DIKUNCI
+}
+
+enum Locale {
+  ID
+  EN
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  name        String
+  description String?
+  isSystem    Boolean          @default(false)
+  permissions RolePermission[]
+  users       User[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  module      String
+  action      String
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id])
+  status       UserStatus @default(AKTIF)
+  locale       Locale     @default(ID)
+  phone        String?
+  jobTitle     String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  unitAccess       UserUnitAccess[]
+  sessions         Session[]
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+  journalEntries   JournalEntry[]     @relation("JournalCreatedBy")
+  postedEntries    JournalEntry[]     @relation("JournalPostedBy")
+  pettyCashClaims  PettyCashClaim[]   @relation("ClaimRequester")
+  approvalRequests ApprovalRequest[]  @relation("ApprovalRequester")
+  approvalActions  ApprovalDecision[]
+  closedPeriods    FiscalPeriod[]     @relation("PeriodClosedBy")
+
+  @@index([roleId])
+}
+
+// Per-unit access grant — a user may be limited to certain books.
+model UserUnitAccess {
+  id        String       @id @default(cuid())
+  userId    String
+  unitId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unit      BusinessUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  canPost   Boolean      @default(true)
+  canApprove Boolean     @default(false)
+
+  @@unique([userId, unitId])
+}
+
+model Session {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenId      String    @unique
+  device       String?
+  location     String?
+  ipAddress    String?
+  lastActiveAt DateTime  @default(now())
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// ── Perusahaan, entitas & unit bisnis ───────────────────────
+
+enum CompanyKind {
+  PERUSAHAAN
+  ENTITAS
+}
+
+model Company {
+  id         String      @id @default(cuid())
+  code       String      @unique
+  name       String
+  kind       CompanyKind @default(PERUSAHAAN)
+  parentId   String?
+  parent     Company?    @relation("CompanyTree", fields: [parentId], references: [id])
+  children   Company[]   @relation("CompanyTree")
+  npwp       String?
+  industry   String?
+  legalForm  String?
+  address    String?
+  city       String?
+  postalCode String?
+  phone      String?
+  email      String?
+  colorTag   String?
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  units           BusinessUnit[]
+  accounts        Account[]
+  periods         FiscalPeriod[]
+  journalEntries  JournalEntry[]
+  vendors         Vendor[]
+  customers       Customer[]
+  bankAccounts    BankAccount[]
+  apInvoices      ApInvoice[]
+  arInvoices      ArInvoice[]
+  salesInvoices   SalesInvoice[]
+  purchaseOrders  PurchaseOrder[]
+  pettyCashClaims PettyCashClaim[]
+  fixedAssets     FixedAsset[]
+  inventoryItems  InventoryItem[]
+  budgetLines     BudgetLine[]
+  taxRecords      TaxRecord[]
+  approvals       ApprovalRequest[]
+  numberings      DocumentNumbering[]
+  directors       Director[]
+}
+
+model Director {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  position  String
+  name      String
+  nik       String?
+  npwp      String?
+  address   String?
+  startDate DateTime?
+
+  @@index([companyId])
+}
+
+model BusinessUnit {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code      String
+  name      String
+  address   String?
+  isActive  Boolean  @default(true)
+  needsWork Boolean  @default(false) // legenda "Modul Perlu Dikerjakan"
+  hasVariance Boolean @default(false) // legenda "Masih Selisih"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  access          UserUnitAccess[]
+  journalEntries  JournalEntry[]
+  bankAccounts    BankAccount[]
+  apInvoices      ApInvoice[]
+  arInvoices      ArInvoice[]
+  salesInvoices   SalesInvoice[]
+  purchaseOrders  PurchaseOrder[]
+  pettyCashClaims PettyCashClaim[]
+  fixedAssets     FixedAsset[]
+  inventoryItems  InventoryItem[]
+  budgetLines     BudgetLine[]
+  taxRecords      TaxRecord[]
+  approvals       ApprovalRequest[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+}
+
+// ── Bagan akun & periode ────────────────────────────────────
+
+enum AccountType {
+  ASET
+  KEWAJIBAN
+  EKUITAS
+  PENDAPATAN
+  BEBAN
+}
+
+enum NormalBalance {
+  DEBIT
+  KREDIT
+}
+
+model Account {
+  id            String        @id @default(cuid())
+  companyId     String
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code          String
+  name          String
+  type          AccountType
+  normalBalance NormalBalance
+  parentId      String?
+  parent        Account?      @relation("AccountTree", fields: [parentId], references: [id])
+  children      Account[]     @relation("AccountTree")
+  level         Int           @default(1)
+  isPostable    Boolean       @default(true)
+  isActive      Boolean       @default(true)
+  description   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  journalLines JournalLine[]
+  budgetLines  BudgetLine[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+}
+
+enum PeriodStatus {
+  TERBUKA
+  DITUTUP
+  DIKUNCI
+}
+
+model FiscalPeriod {
+  id         String       @id @default(cuid())
+  companyId  String
+  company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  year       Int
+  month      Int
+  status     PeriodStatus @default(TERBUKA)
+  closedAt   DateTime?
+  closedById String?
+  closedBy   User?        @relation("PeriodClosedBy", fields: [closedById], references: [id])
+
+  journalEntries JournalEntry[]
+
+  @@unique([companyId, year, month])
+  @@index([companyId])
+}
+
+// ── Jurnal & buku besar ─────────────────────────────────────
+
+enum JournalStatus {
+  DRAF
+  DIPOSTING
+  BATAL
+}
+
+enum JournalSource {
+  MANUAL
+  IMPOR
+  FAKTUR_PENJUALAN
+  PEMBELIAN
+  KAS_KECIL
+  PENYUSUTAN
+  PENYESUAIAN
+}
+
+model JournalEntry {
+  id          String        @id @default(cuid())
+  companyId   String
+  company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  unitId      String
+  unit        BusinessUnit  @relation(fields: [unitId], references: [id])
+  periodId    String?
+  period      FiscalPeriod? @relation(fields: [periodId], references: [id])
+  number      String
+  date        DateTime
+  description String
+  reference   String?
+  status      JournalStatus @default(DRAF)
+  source      JournalSource @default(MANUAL)
+  createdById String
+  createdBy   User          @relation("JournalCreatedBy", fields: [createdById], references: [id])
+  postedById  String?
+  postedBy    User?         @relation("JournalPostedBy", fields: [postedById], references: [id])
+  postedAt    DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  lines JournalLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId, date])
+  @@index([unitId])
+}
+
+model JournalLine {
+  id          String       @id @default(cuid())
+  entryId     String
+  entry       JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  accountId   String
+  account     Account      @relation(fields: [accountId], references: [id])
+  description String?
+  debit       Decimal      @default(0) @db.Decimal(18, 2)
+  credit      Decimal      @default(0) @db.Decimal(18, 2)
+  lineNo      Int
+
+  statementLine BankStatementLine?
+
+  @@index([entryId])
+  @@index([accountId])
+}
+
+// ── Kas, bank, impor mutasi & rekonsiliasi ──────────────────
+
+enum BankAccountKind {
+  KAS
+  BANK
+}
+
+model BankAccount {
+  id            String          @id @default(cuid())
+  companyId     String
+  company       Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  unitId        String
+  unit          BusinessUnit    @relation(fields: [unitId], references: [id])
+  name          String
+  kind          BankAccountKind @default(BANK)
+  bankName      String?
+  accountNumber String?
+  currency      String          @default("IDR")
+  openingBalance Decimal        @default(0) @db.Decimal(18, 2)
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  imports         StatementImport[]
+  statementLines  BankStatementLine[]
+  reconciliations Reconciliation[]
+
+  @@index([companyId])
+  @@index([unitId])
+}
+
+enum ImportStatus {
+  DIPROSES
+  SELESAI
+  GAGAL
+}
+
+model StatementImport {
+  id            String       @id @default(cuid())
+  bankAccountId String
+  bankAccount   BankAccount  @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  fileName      String
+  periodFrom    DateTime?
+  periodTo      DateTime?
+  rowCount      Int          @default(0)
+  matchedCount  Int          @default(0)
+  status        ImportStatus @default(DIPROSES)
+  notes         String?
+  createdAt     DateTime     @default(now())
+
+  lines BankStatementLine[]
+
+  @@index([bankAccountId])
+}
+
+enum MatchStatus {
+  BELUM_COCOK
+  COCOK
+  DIABAIKAN
+}
+
+model BankStatementLine {
+  id            String       @id @default(cuid())
+  importId      String
+  import        StatementImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+  bankAccountId String
+  bankAccount   BankAccount  @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  date          DateTime
+  description   String
+  reference     String?
+  debit         Decimal      @default(0) @db.Decimal(18, 2)
+  credit        Decimal      @default(0) @db.Decimal(18, 2)
+  runningBalance Decimal?    @db.Decimal(18, 2)
+  matchStatus   MatchStatus  @default(BELUM_COCOK)
+  journalLineId String?      @unique
+  journalLine   JournalLine? @relation(fields: [journalLineId], references: [id])
+  reconciliationId String?
+  reconciliation Reconciliation? @relation(fields: [reconciliationId], references: [id])
+
+  @@index([bankAccountId, date])
+  @@index([importId])
+}
+
+enum ReconciliationStatus {
+  BERJALAN
+  SELESAI
+}
+
+model Reconciliation {
+  id               String               @id @default(cuid())
+  bankAccountId    String
+  bankAccount      BankAccount          @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  periodYear       Int
+  periodMonth      Int
+  bookBalance      Decimal              @default(0) @db.Decimal(18, 2)
+  statementBalance Decimal              @default(0) @db.Decimal(18, 2)
+  status           ReconciliationStatus @default(BERJALAN)
+  closedAt         DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  lines BankStatementLine[]
+
+  @@unique([bankAccountId, periodYear, periodMonth])
+}
+
+// ── Mitra ───────────────────────────────────────────────────
+
+enum PartnerStatus {
+  AKTIF
+  NONAKTIF
+}
+
+model Vendor {
+  id          String        @id @default(cuid())
+  companyId   String
+  company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code        String
+  name        String
+  category    String?
+  npwp        String?
+  contactName String?
+  phone       String?
+  email       String?
+  address     String?
+  paymentTerm Int           @default(30)
+  status      PartnerStatus @default(AKTIF)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  apInvoices     ApInvoice[]
+  purchaseOrders PurchaseOrder[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+}
+
+model Customer {
+  id          String        @id @default(cuid())
+  companyId   String
+  company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code        String
+  name        String
+  category    String?
+  npwp        String?
+  contactName String?
+  phone       String?
+  email       String?
+  address     String?
+  paymentTerm Int           @default(30)
+  creditLimit Decimal       @default(0) @db.Decimal(18, 2)
+  status      PartnerStatus @default(AKTIF)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  arInvoices    ArInvoice[]
+  salesInvoices SalesInvoice[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+}
+
+// ── Hutang & piutang usaha ──────────────────────────────────
+
+enum InvoiceStatus {
+  DRAF
+  TERBUKA
+  SEBAGIAN
+  LUNAS
+  JATUH_TEMPO
+  BATAL
+}
+
+model ApInvoice {
+  id         String        @id @default(cuid())
+  companyId  String
+  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  unitId     String
+  unit       BusinessUnit  @relation(fields: [unitId], references: [id])
+  vendorId   String
+  vendor     Vendor        @relation(fields: [vendorId], references: [id])
+  number     String
+  invoiceDate DateTime
+  dueDate    DateTime
+  amount     Decimal       @db.Decimal(18, 2)
+  paidAmount Decimal       @default(0) @db.Decimal(18, 2)
+  status     InvoiceStatus @default(TERBUKA)
+  description String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@unique([companyId, number])
+  @@index([companyId, dueDate])
+  @@index([vendorId])
+}
+
+model ArInvoice {
+  id          String        @id @default(cuid())
+  companyId   String
+  company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  unitId      String
+  unit        BusinessUnit  @relation(fields: [unitId], references: [id])
+  customerId  String
+  customer    Customer      @relation(fields: [customerId], references: [id])
+  number      String
+  invoiceDate DateTime
+  dueDate     DateTime
+  amount      Decimal       @db.Decimal(18, 2)
+  paidAmount  Decimal       @default(0) @db.Decimal(18, 2)
+  status      InvoiceStatus @default(TERBUKA)
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([companyId, number])
+  @@index([companyId, dueDate])
+  @@index([customerId])
+}
+
+// ── Faktur penjualan (e-Faktur) ─────────────────────────────
+
+enum EfakturStatus {
+  BELUM
+  DIAJUKAN
+  DISETUJUI
+  DITOLAK
+}
+
+model SalesInvoice {
+  id          String        @id @default(cuid())
+  companyId   String
+  company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  unitId      String
+  unit        BusinessUnit  @relation(fields: [unitId], references: [id])
+  customerId  String
+  customer    Customer      @relation(fields: [customerId], references: [id])
+  number      String
+  invoiceDate DateTime
+  dueDate     DateTime
+  dpp         Decimal       @db.Decimal(18, 2)
+  ppnRate     Decimal       @default(11) @db.Decimal(5, 2)
+  ppn         Decimal       @db.Decimal(18, 2)
+  total       Decimal       @db.Decimal(18, 2)
+  paidAmount  Decimal       @default(0) @db.Decimal(18, 2)
+  efaktur     EfakturStatus @default(BELUM)
+  efakturNo   String?
+  termDays    Int           @default(30)
+  status      InvoiceStatus @default(DRAF)
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([companyId, number])
+  @@index([companyId, invoiceDate])
+  @@index([customerId])
+}
+
+// ── Pembelian & purchase order ──────────────────────────────
+
+enum PoStatus {
+  DRAF
+  MENUNGGU_PERSETUJUAN
+  DISETUJUI
+  DITOLAK
+  DIKIRIM
+  DITERIMA
+  DITUTUP
+  BATAL
+}
+
+model PurchaseOrder {
+  id            String       @id @default(cuid())
+  companyId     String
+  company       Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  unitId        String
+  unit          BusinessUnit @relation(fields: [unitId], references: [id])
+  vendorId      String
+  vendor        Vendor       @relation(fields: [vendorId], references: [id])
+  number        String
+  orderDate     DateTime
+  deliveryDate  DateTime?
+  amount        Decimal      @db.Decimal(18, 2)
+  receivedAmount Decimal     @default(0) @db.Decimal(18, 2)
+  billedAmount  Decimal      @default(0) @db.Decimal(18, 2)
+  status        PoStatus     @default(DRAF)
+  stage         String?
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  lines PurchaseOrderLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId, orderDate])
+  @@index([vendorId])
+}
+
+model PurchaseOrderLine {
+  id          String        @id @default(cuid())
+  orderId     String
+  order       PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Decimal       @db.Decimal(18, 4)
+  unitName    String?
+  unitPrice   Decimal       @db.Decimal(18, 2)
+  amount      Decimal       @db.Decimal(18, 2)
+
+  @@index([orderId])
+}
+
+// ── Kas kecil & reimbursement ───────────────────────────────
+
+enum ClaimStatus {
+  DRAF
+  DIAJUKAN
+  DISETUJUI
+  DITOLAK
+  DIBAYAR
+}
+
+model PettyCashClaim {
+  id          String       @id @default(cuid())
+  companyId   String
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  unitId      String
+  unit        BusinessUnit @relation(fields: [unitId], references: [id])
+  number      String
+  requesterId String
+  requester   User         @relation("ClaimRequester", fields: [requesterId], references: [id])
+  claimDate   DateTime
+  category    String
+  amount      Decimal      @db.Decimal(18, 2)
+  description String?
+  receiptName String?
+  status      ClaimStatus  @default(DRAF)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([companyId, number])
+  @@index([companyId, claimDate])
+  @@index([requesterId])
+}
+
+// ── Aset tetap & penyusutan ─────────────────────────────────
+
+enum DepreciationMethod {
+  GARIS_LURUS
+  SALDO_MENURUN
+}
+
+enum AssetStatus {
+  AKTIF
+  DIJUAL
+  DIHAPUS
+  HABIS_SUSUT
+}
+
+model FixedAsset {
+  id              String             @id @default(cuid())
+  companyId       String
+  company         Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  unitId          String
+  unit            BusinessUnit       @relation(fields: [unitId], references: [id])
+  code            String
+  name            String
+  group           String
+  acquisitionDate DateTime
+  acquisitionCost Decimal            @db.Decimal(18, 2)
+  residualValue   Decimal            @default(0) @db.Decimal(18, 2)
+  usefulLifeMonths Int
+  method          DepreciationMethod @default(GARIS_LURUS)
+  status          AssetStatus        @default(AKTIF)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  depreciations DepreciationEntry[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([unitId])
+}
+
+model DepreciationEntry {
+  id          String     @id @default(cuid())
+  assetId     String
+  asset       FixedAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  periodYear  Int
+  periodMonth Int
+  expense     Decimal    @db.Decimal(18, 2)
+  accumulated Decimal    @db.Decimal(18, 2)
+  bookValue   Decimal    @db.Decimal(18, 2)
+  postedAt    DateTime?
+
+  @@unique([assetId, periodYear, periodMonth])
+  @@index([assetId])
+}
+
+// ── Persediaan ──────────────────────────────────────────────
+
+model InventoryItem {
+  id         String        @id @default(cuid())
+  companyId  String
+  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  unitId     String
+  unit       BusinessUnit  @relation(fields: [unitId], references: [id])
+  code       String
+  name       String
+  warehouse  String
+  unitName   String
+  stock      Decimal       @default(0) @db.Decimal(18, 4)
+  minimum    Decimal       @default(0) @db.Decimal(18, 4)
+  averageCost Decimal      @default(0) @db.Decimal(18, 2)
+  status     PartnerStatus @default(AKTIF)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  movements InventoryMovement[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+}
+
+enum MovementKind {
+  MASUK
+  KELUAR
+  PENYESUAIAN
+}
+
+model InventoryMovement {
+  id        String        @id @default(cuid())
+  itemId    String
+  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  date      DateTime
+  kind      MovementKind
+  quantity  Decimal       @db.Decimal(18, 4)
+  unitCost  Decimal       @default(0) @db.Decimal(18, 2)
+  reference String?
+  note      String?
+
+  @@index([itemId, date])
+}
+
+// ── Anggaran & realisasi ────────────────────────────────────
+
+model BudgetLine {
+  id         String       @id @default(cuid())
+  companyId  String
+  company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  unitId     String
+  unit       BusinessUnit @relation(fields: [unitId], references: [id])
+  accountId  String
+  account    Account      @relation(fields: [accountId], references: [id])
+  year       Int
+  month      Int?
+  budget     Decimal      @default(0) @db.Decimal(18, 2)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([companyId, unitId, accountId, year, month])
+  @@index([companyId, year])
+}
+
+// ── Pajak ───────────────────────────────────────────────────
+
+enum TaxKind {
+  PPN_KELUARAN
+  PPN_MASUKAN
+  PPH_21
+  PPH_22
+  PPH_23
+  PPH_25
+  PPH_4_2
+}
+
+enum TaxStatus {
+  DRAF
+  DILAPORKAN
+  DIBAYAR
+  TERLAMBAT
+}
+
+model TaxRecord {
+  id          String       @id @default(cuid())
+  companyId   String
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  unitId      String
+  unit        BusinessUnit @relation(fields: [unitId], references: [id])
+  kind        TaxKind
+  periodYear  Int
+  periodMonth Int
+  dpp         Decimal      @default(0) @db.Decimal(18, 2)
+  taxAmount   Decimal      @default(0) @db.Decimal(18, 2)
+  dueDate     DateTime?
+  reportedAt  DateTime?
+  paidAt      DateTime?
+  status      TaxStatus    @default(DRAF)
+  reference   String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([companyId, periodYear, periodMonth])
+}
+
+// ── Notifikasi, persetujuan & audit ─────────────────────────
+
+enum ApprovalKind {
+  JURNAL
+  PURCHASE_ORDER
+  KAS_KECIL
+  FAKTUR_PENJUALAN
+  TUTUP_PERIODE
+}
+
+enum ApprovalStatus {
+  MENUNGGU
+  DISETUJUI
+  DITOLAK
+  DIBATALKAN
+}
+
+model ApprovalRequest {
+  id           String         @id @default(cuid())
+  companyId    String
+  company      Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  unitId       String
+  unit         BusinessUnit   @relation(fields: [unitId], references: [id])
+  kind         ApprovalKind
+  referenceId  String
+  referenceNo  String
+  requesterId  String
+  requester    User           @relation("ApprovalRequester", fields: [requesterId], references: [id])
+  amount       Decimal        @default(0) @db.Decimal(18, 2)
+  status       ApprovalStatus @default(MENUNGGU)
+  escalateNote String?
+  requestedAt  DateTime       @default(now())
+  resolvedAt   DateTime?
+
+  decisions ApprovalDecision[]
+
+  @@index([companyId, status])
+  @@index([requesterId])
+}
+
+model ApprovalDecision {
+  id         String         @id @default(cuid())
+  requestId  String
+  request    ApprovalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  approverId String
+  approver   User           @relation(fields: [approverId], references: [id])
+  status     ApprovalStatus
+  note       String?
+  decidedAt  DateTime       @default(now())
+
+  @@index([requestId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  summary    String?
+  changes    Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+// ── Setelan sistem ──────────────────────────────────────────
+
+model DocumentNumbering {
+  id         String  @id @default(cuid())
+  companyId  String
+  company    Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  docType    String
+  pattern    String
+  nextNumber Int     @default(1)
+
+  @@unique([companyId, docType])
+}
+
+enum IntegrationStatus {
+  TERHUBUNG
+  TERPUTUS
+  BELUM_DIATUR
+}
+
+model Integration {
+  id         String            @id @default(cuid())
+  name       String            @unique
+  status     IntegrationStatus @default(BELUM_DIATUR)
+  lastSyncAt DateTime?
+  config     Json?
+}
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+// ── Email internal (layar 04) ───────────────────────────────
+
+model MailMessage {
+  id         String   @id @default(cuid())
+  folder     String   @default("masuk")
+  fromName   String
+  fromEmail  String
+  toEmail    String
+  subject    String
+  body       String
+  isRead     Boolean  @default(false)
+  isStarred  Boolean  @default(false)
+  receivedAt DateTime @default(now())
+
+  @@index([folder, receivedAt])
+}

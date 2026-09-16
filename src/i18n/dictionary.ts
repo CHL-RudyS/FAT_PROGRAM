@@ -731,6 +731,24 @@ const SCREEN_ID_EN: Record<string, string> = {
   'Memeriksa…': 'Checking…',
   'Pilih buku unit bisnis yang ingin Anda kerjakan.': 'Choose the business unit book you want to work in.',
   'Membuka buku unit…': 'Opening the unit book…',
+  'Modul Akuntansi - Internal': 'Accounting Module - Internal',
+  'Pilih Modul': 'Choose Modules',
+  'dari': 'of',
+  'dipilih': 'selected',
+  'Cari modul…': 'Search modules…',
+  'Modul tidak ditemukan.': 'No module found.',
+  'Kembali': 'Back',
+  'Default': 'Default',
+  'Dashboard, email, dan peramban internal': 'Dashboard, email and the internal browser',
+  'Jurnal, buku besar, kas, hutang, piutang, dan pajak':
+    'Journals, ledger, cash, payables, receivables and tax',
+  'Vendor, customer, dan klien yang dibukukan': 'Vendors, customers and the clients on the books',
+  'Laporan keuangan, khusus, dan konsolidasi': 'Financial, special and consolidated reports',
+  'Unit bisnis, bagan akun, dan pengendalian': 'Business units, chart of accounts and controls',
+  'Pilih maksimal 5 modul dari kelompok mana pun — boleh kurang atau tidak sama sekali. Tombol Default mengembalikan ke Dashboard, Email, dan Browser.':
+    'Pick up to 5 modules from any group — fewer, or none, is fine. Default restores Dashboard, Email and Browser.',
+  'Pilih Jalan Pintas sesuai dengan Modul yang mau di tampilkan':
+    'Pick the shortcuts for the modules you want on display',
   'Minimal 8 karakter, huruf + angka': 'At least 8 characters, letters + digits',
   'Ulangi kata sandi baru': 'Repeat the new password',
   'Kata sandi berhasil diganti. Sesi di perangkat lain diakhiri.':

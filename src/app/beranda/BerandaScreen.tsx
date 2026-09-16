@@ -18,10 +18,46 @@ import {
   IconSearch,
 } from "@/components/shell/icons";
 import { useT } from "@/i18n/LocaleProvider";
-import { MODULE_GROUPS, ALL_MODULES } from "@/lib/navigation";
+import {
+  MODULE_GROUPS,
+  ALL_MODULES,
+  SHORTCUT_GROUPS,
+  SHORTCUT_DEFAULTS,
+  MAX_SHORTCUTS,
+  type ModuleEntry,
+  type ModuleGroup,
+} from "@/lib/navigation";
 import { MONTHS_ID, titleCase } from "@/lib/format";
 
 export type BerandaTodo = { key: string; href: string; count: number; label: string; tone: "bad" | "warn" };
+
+/** One selectable module inside the shortcut picker. */
+function ModuleCheck({
+  entry,
+  draft,
+  toggle,
+  t,
+}: {
+  entry: ModuleEntry;
+  draft: string[];
+  toggle: (key: string) => void;
+  t: (text: string) => string;
+}) {
+  return (
+    <label
+      className="tile"
+      style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, cursor: "pointer", fontSize: 12.5 }}
+    >
+      <input
+        type="checkbox"
+        checked={draft.includes(entry.key)}
+        onChange={() => toggle(entry.key)}
+        style={{ width: 15, height: 15, flex: "none" }}
+      />
+      {t(entry.label)}
+    </label>
+  );
+}
 
 /** Each shortcut tile takes the icon of the menu group the module sits under. */
 const groupOfModule = new Map(
@@ -64,6 +100,11 @@ export default function BerandaScreen({
 
   const [userMenu, setUserMenu] = useState(false);
   const [settings, setSettings] = useState(false);
+  /** The picker edits a copy, so Batal can leave the saved list untouched. */
+  const [draft, setDraft] = useState<string[]>(shortcuts);
+  const [openPickerGroup, setOpenPickerGroup] = useState<ModuleGroup | null>(null);
+  const [moduleQuery, setModuleQuery] = useState("");
+  const [pickerError, setPickerError] = useState("");
   const [openTab, setOpenTab] = useState<string | null>(null);
   const [stamp, setStamp] = useState("");
   const [editing, setEditing] = useState(false);
@@ -104,6 +145,14 @@ export default function BerandaScreen({
     [selected],
   );
 
+  const moduleHits = useMemo(() => {
+    const needle = moduleQuery.trim().toLowerCase();
+    if (!needle) return [];
+    return SHORTCUT_GROUPS.flatMap((group) => group.items).filter((entry) =>
+      `${entry.label} ${entry.hint ?? ""}`.toLowerCase().includes(needle),
+    );
+  }, [moduleQuery]);
+
   const searchHits = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return [];
@@ -116,8 +165,33 @@ export default function BerandaScreen({
     router.refresh();
   }
 
+  function openPicker() {
+    setDraft(selected);
+    setOpenPickerGroup(null);
+    setModuleQuery("");
+    setPickerError("");
+    setEditing(true);
+  }
+
+  function closePicker() {
+    setEditing(false);
+  }
+
+  function toggleModule(key: string) {
+    setPickerError("");
+    setDraft((current) => {
+      if (current.includes(key)) return current.filter((item) => item !== key);
+      if (current.length >= MAX_SHORTCUTS) {
+        setPickerError(`Pintasan maksimal ${MAX_SHORTCUTS} modul — lepas salah satu dulu.`);
+        return current;
+      }
+      return [...current, key];
+    });
+  }
+
   async function saveShortcuts(keys: string[]) {
     setSelected(keys);
+    setEditing(false);
     await fetch("/api/shortcuts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -159,16 +233,17 @@ export default function BerandaScreen({
     >
       <BackdropWaves />
 
-      <div style={{ width: "100%", maxWidth: 1180, margin: "auto", display: "flex", flexDirection: "column", gap: 14, alignItems: "flex-end" }}>
+      {/* Three columns: the menu card sits low on the left, the book sits in
+          the middle, and the shortcut list runs down the right. */}
+      <div className="beranda-row" style={{ width: "100%", maxWidth: 1400, margin: "auto", display: "flex", gap: 16, alignItems: "stretch" }}>
+        <div className="beranda-nav" style={{ flex: "0 0 424px", minWidth: 0, display: "flex", alignItems: "flex-end" }}>
         <div
           style={{
             background: "var(--card)",
             borderRadius: 14,
             boxShadow: "0 6px 20px rgba(22,32,27,.12)",
             position: "relative",
-            width: "57.5%",
-            minWidth: 391,
-            marginRight: 22,
+            width: "100%",
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "12px 20px 16px" }}>
@@ -411,8 +486,9 @@ export default function BerandaScreen({
             </div>
           )}
         </div>
+        </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.05fr) minmax(0,1fr)", gap: 26, width: "100%", background: "var(--card)", borderRadius: 14, boxShadow: "0 6px 20px rgba(22,32,27,.12)", padding: "26px 24px", alignItems: "start" }}>
+        <div className="beranda-main" style={{ flex: "1 1 0", minWidth: 0, display: "grid", gridTemplateColumns: "minmax(0,1.05fr) minmax(0,1fr)", gap: 26, background: "var(--card)", borderRadius: 14, boxShadow: "0 6px 20px rgba(22,32,27,.12)", padding: "26px 24px", alignItems: "start", alignContent: "start" }}>
           <div>
             <div style={{ fontSize: 13, color: "var(--ink3)" }}>{t("Selamat Datang Kembali :")}</div>
             <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-.02em", lineHeight: 1.2, marginTop: 6, textTransform: "uppercase", color: "var(--ink)" }}>
@@ -468,13 +544,13 @@ export default function BerandaScreen({
           </div>
         </div>
 
-        <div style={{ width: "100%", background: "var(--card)", borderRadius: 14, boxShadow: "0 6px 20px rgba(22,32,27,.12)", padding: "16px 18px" }}>
+        <aside className="beranda-side" style={{ flex: "0 0 336px", minWidth: 0, alignSelf: "start", background: "var(--card)", borderRadius: 14, boxShadow: "0 6px 20px rgba(22,32,27,.12)", padding: "16px 18px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 11 }}>
             <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--ink4)" }}>
               {t("Daftar Modul")}
             </span>
             <button
-              onClick={() => setEditing(true)}
+              onClick={openPicker}
               style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 500, color: "var(--ledger-dk)", padding: "3px 8px", borderRadius: 7 }}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -484,7 +560,7 @@ export default function BerandaScreen({
               {t("Edit")}
             </button>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 10 }}>
             {tiles.map((entry) => {
               const Icon = GROUP_ICONS[groupOfModule.get(entry.key) ?? ""] ?? IconManajemen;
               return (
@@ -526,54 +602,167 @@ export default function BerandaScreen({
             })}
             {tiles.length === 0 && <span className="sm muted">{t("Belum ada pintasan. Klik Edit untuk memilih modul.")}</span>}
           </div>
-        </div>
 
-        <div className="legend" style={{ width: "100%" }}>
-          <span>
-            <i style={{ width: 8, height: 8, borderRadius: "50%", background: "#E8A317" }} />
+          <div
+            className="legend"
+            style={{ borderTop: "1px solid var(--rule)", marginTop: 14, paddingTop: 12, gap: 16, alignItems: "center" }}
+          >
+            <span style={{ flexBasis: "100%", lineHeight: 1.5, display: "block" }}>
+              {t("Modul Akuntansi - Internal")}
+              <br />
+              <span style={{ display: "inline-block", marginTop: 1 }}>
+                {t("Pilih Jalan Pintas sesuai dengan Modul yang mau di tampilkan")}
+              </span>
+            </span>
             <span>
-              {todos.filter((todo) => todo.tone === "warn").reduce((sum, todo) => sum + todo.count, 0)} {t("Modul Perlu Dikerjakan")}
+              <i style={{ width: 8, height: 8, borderRadius: "50%", background: "#E8A317" }} />
+              <span>
+                {todos.filter((todo) => todo.tone === "warn").reduce((sum, todo) => sum + todo.count, 0)} {t("Modul Perlu Dikerjakan")}
+              </span>
             </span>
-          </span>
-          <span>
-            <i style={{ width: 10, height: 10, borderRadius: "50%", background: "#C0392B", boxShadow: "0 0 0 3px rgba(192,57,43,.18)" }} />
-            <span style={{ fontWeight: 600, color: "#A32E22" }}>
-              {todos.filter((todo) => todo.tone === "bad").reduce((sum, todo) => sum + todo.count, 0)} {t("Modul Masih Selisih")}
+            <span>
+              <i style={{ width: 10, height: 10, borderRadius: "50%", background: "#C0392B", boxShadow: "0 0 0 3px rgba(192,57,43,.18)" }} />
+              <span style={{ fontWeight: 600, color: "#A32E22" }}>
+                {todos.filter((todo) => todo.tone === "bad").reduce((sum, todo) => sum + todo.count, 0)} {t("Modul Masih Selisih")}
+              </span>
             </span>
-          </span>
-          <span style={{ marginLeft: "auto" }}>{t("Versi Beta")}</span>
-        </div>
+            <span style={{ marginLeft: "auto" }}>{t("Versi Beta")}</span>
+          </div>
+        </aside>
       </div>
 
       <Dialog
         open={editing}
-        onClose={() => setEditing(false)}
-        title={t("Atur Pintasan Modul")}
-        maxWidth={620}
+        onClose={closePicker}
+        title={t("Pilih Modul")}
+        badge={`${draft.length} ${t("dari")} ${MAX_SHORTCUTS} ${t("dipilih")}`}
+        maxWidth={460}
         footer={
-          <button className="btn btn-primary" style={{ marginLeft: "auto" }} onClick={() => setEditing(false)}>
-            {t("Selesai")}
-          </button>
+          <>
+            <button className="btn" style={{ marginRight: "auto" }} onClick={() => setDraft(SHORTCUT_DEFAULTS)}>
+              {t("Default")}
+            </button>
+            <button className="btn" onClick={closePicker}>
+              {t("Batal")}
+            </button>
+            <button className="btn btn-primary" onClick={() => void saveShortcuts(draft)}>
+              {t("Simpan")}
+            </button>
+          </>
         }
       >
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 8 }}>
-          {ALL_MODULES.filter((entry) => entry.hint).map((entry) => {
-            const on = selected.includes(entry.key);
-            return (
-              <label key={entry.key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, padding: "6px 8px", borderRadius: 8, cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={on}
-                  onChange={() =>
-                    void saveShortcuts(on ? selected.filter((key) => key !== entry.key) : [...selected, entry.key])
-                  }
-                  style={{ width: "auto" }}
-                />
-                <span>{t(entry.label)}</span>
-              </label>
-            );
-          })}
+        {draft.length > 0 && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+            {draft.map((key) => {
+              const entry = ALL_MODULES.find((module) => module.key === key);
+              if (!entry) return null;
+              return (
+                <span key={key} className="chip chip-open" style={{ gap: 7 }}>
+                  {t(entry.label)}
+                  <button
+                    onClick={() => setDraft((current) => current.filter((item) => item !== key))}
+                    aria-label={`${t("Hapus")} ${t(entry.label)}`}
+                    style={{ color: "inherit", lineHeight: 1 }}
+                  >
+                    ✕
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        )}
+
+        <div style={{ position: "relative" }}>
+          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", display: "flex" }}>
+            <IconSearch size={14} />
+          </span>
+          <input
+            type="text"
+            autoComplete="off"
+            placeholder={t("Cari modul…")}
+            value={moduleQuery}
+            onChange={(event) => setModuleQuery(event.target.value)}
+            style={{ paddingLeft: 33, width: "100%", borderRadius: 9, background: "var(--paper)", fontSize: 12.5 }}
+          />
         </div>
+
+        <div style={{ marginTop: 12 }}>
+          {moduleQuery.trim() ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {moduleHits.length === 0 && <span className="sm muted">{t("Modul tidak ditemukan.")}</span>}
+              {moduleHits.map((entry) => (
+                <ModuleCheck key={entry.key} entry={entry} draft={draft} toggle={toggleModule} t={t} />
+              ))}
+            </div>
+          ) : openPickerGroup ? (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <button
+                  onClick={() => setOpenPickerGroup(null)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 500, color: "var(--ledger-dk)", padding: "4px 9px", borderRadius: 7 }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M15 5l-7 7 7 7" />
+                  </svg>
+                  {t("Kembali")}
+                </button>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>{t(openPickerGroup.label)}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {openPickerGroup.items.map((entry) => (
+                  <ModuleCheck key={entry.key} entry={entry} draft={draft} toggle={toggleModule} t={t} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {SHORTCUT_GROUPS.map((group) => {
+                const picked = group.items.filter((entry) => draft.includes(entry.key)).length;
+                return (
+                  <button
+                    key={group.key}
+                    onClick={() => setOpenPickerGroup(group)}
+                    className="qtile"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 11,
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "11px 12px",
+                      borderRadius: 9,
+                      border: "1px solid var(--rule)",
+                      background: "var(--card)",
+                    }}
+                  >
+                    <span style={{ minWidth: 0, flex: 1 }}>
+                      <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>{t(group.label)}</span>
+                      <span style={{ display: "block", fontSize: 11, color: "var(--ink3)", marginTop: 2 }}>{t(group.summary)}</span>
+                    </span>
+                    {picked > 0 && (
+                      <span style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 999, background: "#DCE9F1", color: "#1F5E80", flex: "none" }}>
+                        {picked}
+                      </span>
+                    )}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: "none" }}>
+                      <path d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="note" style={{ marginTop: 12 }}>
+          {t("Pilih maksimal 5 modul dari kelompok mana pun — boleh kurang atau tidak sama sekali. Tombol Default mengembalikan ke Dashboard, Email, dan Browser.")}
+        </div>
+
+        {pickerError && (
+          <div style={{ marginTop: 10, padding: "9px 11px", borderRadius: 8, fontSize: 12, background: "var(--brick-bg)", color: "var(--brick)" }}>
+            {pickerError}
+          </div>
+        )}
       </Dialog>
 
       <SettingsDialog
@@ -582,7 +771,19 @@ export default function BerandaScreen({
         user={{ name: user.name, email: user.email, initials: user.initials }}
       />
 
-      <style>{`.qtile:hover{border-color:var(--ledger)!important;background:var(--ledger-bg)!important}.tile:hover{background:var(--sunk)}`}</style>
+      <style>{`
+        .qtile:hover{border-color:var(--ledger)!important;background:var(--ledger-bg)!important}
+        .tile:hover{background:var(--sunk)}
+        @media(max-width:1280px){
+          .beranda-row{flex-wrap:wrap}
+          .beranda-nav{flex:1 1 380px}
+          .beranda-side{flex:1 1 320px}
+          .beranda-main{flex:1 1 100%;order:-1}
+        }
+        @media(max-width:820px){
+          .beranda-main{grid-template-columns:minmax(0,1fr)}
+        }
+      `}</style>
     </div>
   );
 }

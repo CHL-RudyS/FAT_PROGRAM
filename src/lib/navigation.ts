@@ -12,13 +12,22 @@ export type ModuleEntry = {
 export type ModuleGroup = {
   key: string;
   label: string;
+  /** One line summarising the group, shown in the shortcut picker. */
+  summary: string;
   items: ModuleEntry[];
 };
+
+/** How many shortcut tiles the module home will show. */
+export const MAX_SHORTCUTS = 5;
+
+/** What the picker's "Default" button restores. */
+export const SHORTCUT_DEFAULTS = ["dash", "email", "internet"];
 
 export const MODULE_GROUPS: ModuleGroup[] = [
   {
     key: "beranda",
     label: "Beranda",
+    summary: "Dashboard, email, dan peramban internal",
     items: [
       { key: "dash", label: "Dashboard", href: "/dashboard", screen: "06", hint: "Status pembukuan seluruh klien" },
       { key: "direksi", label: "Dashboard Direksi", href: "/dashboard-direksi", screen: "34", hint: "Ringkasan kinerja per unit bisnis" },
@@ -29,6 +38,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
   {
     key: "transaksi",
     label: "Transaksi",
+    summary: "Jurnal, buku besar, kas, hutang, piutang, dan pajak",
     items: [
       { key: "jurnal", label: "Jurnal Umum", href: "/jurnal", screen: "15", hint: "Entri dan posting jurnal" },
       { key: "ledger", label: "Buku Besar", href: "/buku-besar", screen: "16", hint: "Mutasi dan saldo per akun" },
@@ -46,6 +56,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
   {
     key: "mitra",
     label: "Mitra",
+    summary: "Vendor, customer, dan klien yang dibukukan",
     items: [
       { key: "vendor", label: "Vendor", href: "/vendor", screen: "13", hint: "Data master pemasok & vendor" },
       { key: "customer", label: "Customer", href: "/customer", screen: "14", hint: "Piutang dilacak per buku unit" },
@@ -54,6 +65,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
   {
     key: "laporan",
     label: "Laporan",
+    summary: "Laporan keuangan, khusus, dan konsolidasi",
     items: [
       { key: "laporan", label: "Laporan Keuangan", href: "/laporan", screen: "19", hint: "Neraca, laba rugi, arus kas" },
       { key: "lapkhusus", label: "Laporan Khusus", href: "/laporan-khusus", screen: "10", hint: "Laporan fiskal dan direksi" },
@@ -65,6 +77,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
   {
     key: "manajemen",
     label: "Manajemen",
+    summary: "Unit bisnis, bagan akun, dan pengendalian",
     items: [
       { key: "klien", label: "Perusahaan & Entitas", href: "/klien", screen: "07", hint: "Data master perusahaan" },
       { key: "cabang", label: "Unit Bisnis", href: "/unit-bisnis", screen: "08", hint: "Buku terpisah per unit" },
@@ -89,6 +102,23 @@ export const EXTRA_MODULES: ModuleEntry[] = [
   { key: "setup", label: "Set Up", href: "/setup", screen: "01" },
   { key: "perusahaan", label: "Perusahaan", href: "/perusahaan", screen: "02" },
 ];
+
+/**
+ * What the shortcut picker offers, group by group. Email and the browser are
+ * standalone screens rather than menu entries, but they belong with Beranda
+ * here — they are two of the three shortcuts a new account starts with.
+ */
+export const SHORTCUT_GROUPS: ModuleGroup[] = MODULE_GROUPS.map((group) =>
+  group.key === "beranda"
+    ? {
+        ...group,
+        items: [
+          ...group.items,
+          ...EXTRA_MODULES.filter((entry) => entry.key === "email" || entry.key === "internet"),
+        ],
+      }
+    : group,
+);
 
 export const ALL_MODULES: ModuleEntry[] = [
   ...MODULE_GROUPS.flatMap((group) => group.items),

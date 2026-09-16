@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { getActiveContext, initialsOf } from "@/lib/context";
+import { MAX_SHORTCUTS, SHORTCUT_DEFAULTS } from "@/lib/navigation";
 import { db } from "@/lib/db";
 import BerandaScreen, { type BerandaTodo } from "./BerandaScreen";
 
-const SHORTCUT_DEFAULTS = ["ledger", "dash", "email", "internet"];
 
 export default async function BerandaPage() {
   const context = await getActiveContext();
@@ -54,8 +54,12 @@ export default async function BerandaPage() {
     });
   }
 
+  // Trimmed on read as well as on write, so lists saved before the limit
+  // existed still show the number of tiles the screen is designed around.
   const shortcuts = Array.isArray(saved?.value)
-    ? (saved.value as unknown[]).filter((item): item is string => typeof item === "string")
+    ? (saved.value as unknown[])
+        .filter((item): item is string => typeof item === "string")
+        .slice(0, MAX_SHORTCUTS)
     : SHORTCUT_DEFAULTS;
 
   return (

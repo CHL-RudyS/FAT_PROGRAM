@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { ALL_MODULES } from "@/lib/navigation";
+import { ALL_MODULES, MAX_SHORTCUTS } from "@/lib/navigation";
 
-const schema = z.object({ keys: z.array(z.string()).max(24) });
-
-export const SHORTCUT_DEFAULTS = ["ledger", "dash", "email", "internet"];
+const schema = z.object({
+  keys: z.array(z.string()).max(MAX_SHORTCUTS, `Pintasan maksimal ${MAX_SHORTCUTS} modul.`),
+});
 
 export async function POST(request: Request) {
   const user = await requireUser();

@@ -11,6 +11,18 @@ export async function GET() {
     commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "local",
   };
 
+  // Names only, never values — shows whether the function can see any database
+  // variable at all, which is the usual cause of a failed bootstrap.
+  const KNOWN_DB_VARS = [
+    "DATABASE_URL",
+    "POSTGRES_PRISMA_URL",
+    "POSTGRES_URL",
+    "DATABASE_URL_UNPOOLED",
+    "POSTGRES_URL_NON_POOLING",
+  ];
+  checks.databaseVarsPresent = KNOWN_DB_VARS.filter((name) => Boolean(process.env[name]));
+  checks.vercelEnv = process.env.VERCEL_ENV ?? "(bukan Vercel)";
+
   const url = resolveDatabaseUrl();
   checks.databaseUrlSet = Boolean(url);
   if (url) {
@@ -26,8 +38,10 @@ export async function GET() {
     return NextResponse.json(
       {
         ok: false,
-        problem: "DATABASE_URL belum diset di environment variables.",
-        fix: "Tambahkan DATABASE_URL (atau POSTGRES_URL) di Vercel → Settings → Environment Variables, lalu redeploy.",
+        problem: "Fungsi ini tidak melihat satu pun variabel database.",
+        fix:
+          "Di Vercel → Settings → Environment Variables project INI, tambahkan DATABASE_URL, centang environment Production, " +
+          "lalu Deployments → Redeploy. Perubahan environment variable baru berlaku setelah deployment baru.",
         checks,
       },
       { status: 503 },

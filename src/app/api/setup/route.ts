@@ -106,15 +106,21 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const notConfigured = message.includes("Database belum dikonfigurasi");
+
     return NextResponse.json(
       {
         ok: false,
-        problem: "Setup gagal.",
-        fix: "Periksa DATABASE_URL dan apakah database mengizinkan koneksi dari Vercel.",
+        problem: notConfigured
+          ? "Fungsi ini tidak melihat satu pun variabel database."
+          : "Setup gagal.",
+        fix: notConfigured
+          ? "Di Vercel → Settings → Environment Variables project INI, tambahkan DATABASE_URL, centang Production, lalu Redeploy. Perubahan environment variable hanya berlaku pada deployment baru. Cek /api/health untuk melihat variabel apa yang terbaca."
+          : "Periksa apakah database mengizinkan koneksi dari Vercel.",
         steps,
         detail: message.slice(0, 400),
       },
-      { status: 500 },
+      { status: notConfigured ? 503 : 500 },
     );
   }
 }

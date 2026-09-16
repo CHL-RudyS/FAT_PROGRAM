@@ -26,6 +26,29 @@ sharing the same password.
 
 `SESSION_SECRET` signs the session cookie — generate one with `openssl rand -base64 32`.
 
+## Deploying (Vercel + Neon/Postgres)
+
+The build alone does **not** create your database tables, so a fresh deployment
+will fail at login until you do this once:
+
+1. Set environment variables in Vercel → Settings → Environment Variables:
+   - `DATABASE_URL` — your Postgres connection string (Vercel's Neon integration
+     may only set `POSTGRES_URL`; the app falls back to it, but setting
+     `DATABASE_URL` explicitly is clearest)
+   - `SESSION_SECRET` — `openssl rand -base64 32`
+2. Create the schema and seed it, pointing at the production database:
+   ```bash
+   DATABASE_URL="<production connection string>" npm run db:push
+   DATABASE_URL="<production connection string>" npm run db:seed
+   ```
+3. Redeploy.
+
+**Check a deployment with `GET /api/health`.** It reports, without exposing any
+credentials, whether `DATABASE_URL` and `SESSION_SECRET` are set, whether the
+database is reachable, whether the tables exist, and whether the seed has run —
+and names the fix for whichever step is missing. It returns just `{"ok":true}`
+when everything is in order.
+
 ## How the app is organised
 
 ```

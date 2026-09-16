@@ -7,7 +7,6 @@ import { useT } from "@/i18n/LocaleProvider";
 import { titleCase } from "@/lib/format";
 import SettingsDialog from "@/components/ui/SettingsDialog";
 import LoadingOverlay from "@/components/ui/LoadingOverlay";
-import { MENU_CARD_WIDTH } from "@/components/shell/layout";
 import {
   BackdropWaves,
   IconChevronDown,
@@ -154,8 +153,8 @@ export default function PerusahaanScreen({
             boxShadow: "0 6px 20px rgba(22,32,27,.12)",
             position: "relative",
             zIndex: 2,
-            width: MENU_CARD_WIDTH,
-            maxWidth: "100%",
+            width: "57.5%",
+            minWidth: 391,
             marginRight: 22,
           }}
         >

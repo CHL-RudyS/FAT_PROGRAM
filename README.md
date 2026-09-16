@@ -28,20 +28,26 @@ sharing the same password.
 
 ## Deploying (Vercel + Neon/Postgres)
 
-The build alone does **not** create your database tables, so a fresh deployment
-will fail at login until you do this once:
+No terminal is required — the whole bootstrap runs from the Vercel dashboard and
+a browser.
 
 1. Set environment variables in Vercel → Settings → Environment Variables:
    - `DATABASE_URL` — your Postgres connection string (Vercel's Neon integration
      may only set `POSTGRES_URL`; the app falls back to it, but setting
      `DATABASE_URL` explicitly is clearest)
-   - `SESSION_SECRET` — `openssl rand -base64 32`
-2. Create the schema and seed it, pointing at the production database:
-   ```bash
-   DATABASE_URL="<production connection string>" npm run db:push
-   DATABASE_URL="<production connection string>" npm run db:seed
-   ```
-3. Redeploy.
+   - `SESSION_SECRET` — any long random string
+   - `SETUP_TOKEN` — any value you choose, used once to seed the database
+2. Redeploy. The build runs `prisma db push`, which creates the tables.
+3. Open `https://<your-domain>/api/setup?token=<your SETUP_TOKEN>` once. It loads
+   the companies, business units, chart of accounts, roles and users, then
+   reports what it created.
+4. Delete `SETUP_TOKEN` from the environment variables.
+
+The setup route refuses to run once the database already has users, so it cannot
+overwrite a live system.
+
+With a terminal you can instead run `npm run db:push && npm run db:seed` against
+the production `DATABASE_URL` and skip `SETUP_TOKEN` entirely.
 
 **Check a deployment with `GET /api/health`.** It reports, without exposing any
 credentials, whether `DATABASE_URL` and `SESSION_SECRET` are set, whether the

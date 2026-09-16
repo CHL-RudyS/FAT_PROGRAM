@@ -46,7 +46,7 @@ export async function GET() {
         {
           ok: false,
           problem: "Skema sudah ada tetapi belum ada data — seed belum dijalankan.",
-          fix: "Jalankan `npm run db:seed` dengan DATABASE_URL diarahkan ke database produksi.",
+          fix: "Tanpa terminal: set SETUP_TOKEN di environment variables, redeploy, lalu buka /api/setup?token=<nilai itu>. Dengan terminal: `npm run db:seed`.",
           checks,
         },
         { status: 503 },
@@ -82,7 +82,7 @@ export async function GET() {
           ? "Terhubung ke database, tetapi tabelnya belum dibuat."
           : "Tidak bisa terhubung ke database.",
         fix: missingTable
-          ? "Jalankan `npm run db:push` lalu `npm run db:seed` dengan DATABASE_URL diarahkan ke database produksi."
+          ? "Build menjalankan `prisma db push`, jadi redeploy biasanya cukup — pastikan DATABASE_URL tersedia saat build."
           : "Periksa connection string dan apakah database mengizinkan koneksi dari Vercel.",
         detail: message.slice(0, 300),
         checks,

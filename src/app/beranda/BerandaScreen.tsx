@@ -235,7 +235,10 @@ export default function BerandaScreen({
 
       {/* Three columns: the menu card sits low on the left, the book sits in
           the middle, and the shortcut list runs down the right. */}
-      <div className="beranda-row" style={{ width: "100%", maxWidth: 1400, margin: "auto", display: "flex", gap: 16, alignItems: "stretch" }}>
+      {/* `margin: 0 auto` rather than `auto`: the latter also soaks up the
+          vertical free space, which pushed the whole screen to the middle of
+          tall windows instead of sitting under the top edge. */}
+      <div className="beranda-row" style={{ width: "100%", maxWidth: 1400, margin: "0 auto", display: "flex", gap: 16, alignItems: "stretch" }}>
         <div className="beranda-nav" style={{ flex: "0 0 424px", minWidth: 0, display: "flex", alignItems: "flex-end" }}>
         <div
           style={{

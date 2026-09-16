@@ -728,6 +728,8 @@ const SCREEN_ID_EN: Record<string, string> = {
   'Atur akses pengguna per entitas & cabang': 'Set user access per entity & branch',
   'Hapus pengguna': 'Delete user',
   'Kelola pengguna': 'Manage user',
+  'Memeriksa…': 'Checking…',
+  'Menyiapkan ruang kerja…': 'Preparing your workspace…',
   'Non-Aktifkan': 'Deactivate',
   'Aktifkan': 'Activate',
   'Pengguna dinonaktifkan': 'User deactivated',

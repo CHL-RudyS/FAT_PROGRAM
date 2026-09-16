@@ -19,6 +19,15 @@ const ID_FLAG = "linear-gradient(to bottom,#E01020 0 50%,#fff 50% 100%)";
 const EN_FLAG =
   "linear-gradient(#3C3B6E,#3C3B6E) no-repeat top left/50% 50%,repeating-linear-gradient(to bottom,#B22234 0 14.28%,#fff 14.28% 28.56%)";
 
+function Spinner({ size = 15, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg className="spin" width={size} height={size} viewBox="0 0 16 16" aria-hidden="true" style={{ flex: "none" }}>
+      <circle cx="8" cy="8" r="6.5" fill="none" stroke={color} strokeOpacity=".25" strokeWidth="2.2" />
+      <path d="M8 1.5A6.5 6.5 0 0 1 14.5 8" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function formatLastLogin(date: Date, locale: "ID" | "EN") {
   const months =
     locale === "EN"
@@ -37,7 +46,13 @@ export default function LoginScreen({ nextPath }: { nextPath: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  /**
+   * "memeriksa" covers the request itself; "masuk" covers the navigation that
+   * follows it, which renders the company picker from the database and is the
+   * longer of the two. Both keep the form locked.
+   */
+  const [phase, setPhase] = useState<null | "memeriksa" | "masuk">(null);
+  const busy = phase !== null;
   const [clock, setClock] = useState<string>("");
   const langRef = useRef<HTMLDivElement>(null);
 
@@ -62,7 +77,7 @@ export default function LoginScreen({ nextPath }: { nextPath: string }) {
       setError(t("Email dan kata sandi harus diisi."));
       return;
     }
-    setBusy(true);
+    setPhase("memeriksa");
     setError("");
     try {
       const res = await fetch("/api/auth/login", {
@@ -73,14 +88,18 @@ export default function LoginScreen({ nextPath }: { nextPath: string }) {
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
         setError(data.error ?? t("Email atau kata sandi salah."));
+        setPhase(null);
         return;
       }
+      // Deliberately left in the loading state: this screen stays on display
+      // until the next one has rendered, and clearing it here would show an
+      // idle form for the second or two that takes.
+      setPhase("masuk");
       router.replace(nextPath);
       router.refresh();
     } catch {
       setError(t("Tidak dapat terhubung ke server."));
-    } finally {
-      setBusy(false);
+      setPhase(null);
     }
   }
 
@@ -315,6 +334,7 @@ export default function LoginScreen({ nextPath }: { nextPath: string }) {
               type="text"
               autoComplete="username"
               placeholder="nama@kantor.id"
+              disabled={busy}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
@@ -330,6 +350,7 @@ export default function LoginScreen({ nextPath }: { nextPath: string }) {
               type={showPass ? "text" : "password"}
               autoComplete="current-password"
               placeholder={t("Kata sandi")}
+              disabled={busy}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
@@ -363,8 +384,14 @@ export default function LoginScreen({ nextPath }: { nextPath: string }) {
           <span>{t("Lihat kata sandi")}</span>
         </label>
 
-        <button type="submit" className="btn btn-primary" disabled={busy} style={{ width: "100%", padding: 9 }}>
-          {busy ? t("Memproses…") : t("Masuk")}
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={busy}
+          style={{ width: "100%", padding: 9, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+        >
+          {busy && <Spinner color="#fff" />}
+          {phase === "masuk" ? t("Menyiapkan ruang kerja…") : phase ? t("Memeriksa…") : t("Masuk")}
         </button>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 14, fontSize: 12.5 }}>
@@ -387,6 +414,43 @@ export default function LoginScreen({ nextPath }: { nextPath: string }) {
           <span>{t("Logout terakhir dari perangkat ini")}</span> · <span className="num">{clock}</span>
         </div>
       </form>
+
+      {/* The company picker is server-rendered, so this covers the gap between
+          a verified password and the screen that replaces this one. */}
+      {phase === "masuk" && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 80,
+            display: "grid",
+            placeItems: "center",
+            background: "rgba(234,243,248,.5)",
+            backdropFilter: "blur(2px)",
+            WebkitBackdropFilter: "blur(2px)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 11,
+              padding: "14px 22px",
+              borderRadius: 13,
+              background: "rgba(255,255,255,.92)",
+              border: "1px solid var(--rule)",
+              boxShadow: "0 18px 40px -20px rgba(22,32,27,.4)",
+              fontSize: 13.5,
+              color: "var(--ink2)",
+            }}
+          >
+            <Spinner size={18} color="var(--ledger)" />
+            {t("Menyiapkan ruang kerja…")}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

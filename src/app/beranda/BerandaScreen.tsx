@@ -5,22 +5,54 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Dialog from "@/components/ui/Dialog";
-import { BackdropWaves, IconChevronDown, IconSearch } from "@/components/shell/icons";
+import SettingsDialog from "@/components/ui/SettingsDialog";
+import {
+  BackdropWaves,
+  GROUP_ICONS,
+  IconBell,
+  IconChevronDown,
+  IconGear,
+  IconHelp,
+  IconLogout,
+  IconManajemen,
+  IconSearch,
+} from "@/components/shell/icons";
 import { useT } from "@/i18n/LocaleProvider";
 import { MODULE_GROUPS, ALL_MODULES } from "@/lib/navigation";
-import { MONTHS_ID } from "@/lib/format";
+import { MONTHS_ID, titleCase } from "@/lib/format";
 
 export type BerandaTodo = { key: string; href: string; count: number; label: string; tone: "bad" | "warn" };
+
+/** Each shortcut tile takes the icon of the menu group the module sits under. */
+const groupOfModule = new Map(
+  MODULE_GROUPS.flatMap((group) => group.items.map((item) => [item.key, group.key] as const)),
+);
+
+const userMenuItem: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 7,
+  width: "100%",
+  textAlign: "left",
+  padding: "8px 11px",
+  borderRadius: 8,
+  fontSize: 12.5,
+  fontWeight: 500,
+  color: "var(--ink)",
+  whiteSpace: "nowrap",
+};
 
 export default function BerandaScreen({
   company,
   unit,
+  user,
   todos,
   shortcuts,
   companies,
 }: {
   company: { id: string; name: string };
   unit: { id: string; code: string; name: string };
+  user: { name: string; email: string; roleName: string; initials: string };
   todos: BerandaTodo[];
   shortcuts: string[];
   companies: Array<{ id: string; name: string; colorTag: string | null; unitCount: number }>;
@@ -28,6 +60,8 @@ export default function BerandaScreen({
   const router = useRouter();
   const t = useT();
 
+  const [userMenu, setUserMenu] = useState(false);
+  const [settings, setSettings] = useState(false);
   const [openTab, setOpenTab] = useState<string | null>(null);
   const [stamp, setStamp] = useState("");
   const [editing, setEditing] = useState(false);
@@ -56,6 +90,7 @@ export default function BerandaScreen({
       if (!target.closest("[data-menu-root]")) {
         setOpenTab(null);
         setSwitchOpen(false);
+        setUserMenu(false);
       }
     };
     document.addEventListener("mousedown", onDown);
@@ -72,6 +107,12 @@ export default function BerandaScreen({
     if (!needle) return [];
     return companies.filter((item) => item.name.toLowerCase().includes(needle)).slice(0, 8);
   }, [companies, query]);
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/login");
+    router.refresh();
+  }
 
   async function saveShortcuts(keys: string[]) {
     setSelected(keys);
@@ -130,6 +171,109 @@ export default function BerandaScreen({
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "12px 20px 16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, order: 1, alignSelf: "flex-end" }}>
+              <button aria-label={t("Bantuan")} style={{ color: "var(--ink3)", display: "grid", placeItems: "center", width: 32, height: 32, borderRadius: 8 }}>
+                <IconHelp />
+              </button>
+              <Link
+                href="/persetujuan"
+                aria-label={t("Notifikasi")}
+                style={{ color: "var(--ink3)", display: "grid", placeItems: "center", width: 32, height: 32, borderRadius: 8 }}
+              >
+                <IconBell />
+              </Link>
+              <span style={{ display: "block", width: 1, height: 24, background: "var(--rule)" }} />
+
+              <div data-menu-root style={{ position: "relative" }}>
+                <button
+                  onClick={() => setUserMenu((open) => !open)}
+                  aria-haspopup="menu"
+                  aria-expanded={userMenu}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 9,
+                    padding: "4px 6px 4px 4px",
+                    width: 136,
+                    flex: "none",
+                    borderRadius: 9,
+                    color: "var(--ink)",
+                    background: userMenu ? "var(--sunk)" : undefined,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: "50%",
+                      background: "var(--ledger)",
+                      color: "#fff",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      flex: "none",
+                    }}
+                  >
+                    {user.initials}
+                  </span>
+                  <span style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {titleCase(user.name)}
+                    </span>
+                    <span style={{ display: "block", fontSize: 11, color: "var(--ink3)", lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {t(user.roleName)}
+                    </span>
+                  </span>
+                  <IconChevronDown size={14} stroke="var(--ink3)" />
+                </button>
+
+                {userMenu && (
+                  <div
+                    role="menu"
+                    style={{
+                      position: "absolute",
+                      right: 0,
+                      top: "calc(100% + 8px)",
+                      minWidth: "100%",
+                      width: "max-content",
+                      background: "rgba(244,246,242,.94)",
+                      backdropFilter: "blur(10px)",
+                      WebkitBackdropFilter: "blur(10px)",
+                      border: "1px solid var(--rule)",
+                      borderRadius: 12,
+                      boxShadow: "0 14px 34px rgba(22,32,27,.16)",
+                      padding: 5,
+                      zIndex: 46,
+                    }}
+                  >
+                    <Link href="/perusahaan" role="menuitem" style={{ ...userMenuItem, textDecoration: "none" }}>
+                      {t("Perusahaan")}
+                    </Link>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setUserMenu(false);
+                        setSettings(true);
+                      }}
+                      style={userMenuItem}
+                    >
+                      <IconGear />
+                      {t("Pengaturan")}
+                    </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => void logout()}
+                      style={{ ...userMenuItem, color: "var(--brick)", borderTop: "1px solid var(--rule)", marginTop: 3 }}
+                    >
+                      <IconLogout />
+                      {t("Keluar")}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "none", order: 2 }}>
               <Image src="/assets/logo-chl.png" alt="Logo PT. Cipta Harmoni Lestari" width={34} height={32} style={{ height: 32, width: "auto", display: "block" }} priority />
               <span style={{ display: "block", width: 1, height: 26, background: "var(--rule)" }} />
@@ -267,7 +411,7 @@ export default function BerandaScreen({
           )}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 420px", gap: 26, width: "100%", background: "var(--card)", borderRadius: 14, boxShadow: "0 6px 20px rgba(22,32,27,.12)", padding: "26px 24px", alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.05fr) minmax(0,1fr)", gap: 26, width: "100%", background: "var(--card)", borderRadius: 14, boxShadow: "0 6px 20px rgba(22,32,27,.12)", padding: "26px 24px", alignItems: "start" }}>
           <div>
             <div style={{ fontSize: 13, color: "var(--ink3)" }}>{t("Selamat Datang Kembali :")}</div>
             <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-.02em", lineHeight: 1.2, marginTop: 6, textTransform: "uppercase", color: "var(--ink)" }}>
@@ -285,42 +429,49 @@ export default function BerandaScreen({
             </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ border: "1px solid var(--rule)", borderRadius: 12, padding: "14px 16px", background: "var(--paper)" }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, letterSpacing: "-.01em" }}>{t("Perlu Dikerjakan Di Buku Ini")}</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ borderRadius: 12, padding: "16px 18px", background: "var(--paper)" }}>
+              <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: "-.01em" }}>{t("Perlu Dikerjakan Di Buku Ini")}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 7, marginTop: 10 }}>
                 {todos.length === 0 && <span className="sm muted">{t("Tidak ada pekerjaan tertunda di buku ini.")}</span>}
                 {todos.map((todo) => (
                   <Link
                     key={todo.key}
                     href={todo.href}
-                    style={{ display: "flex", alignItems: "center", gap: 9, padding: "6px 8px", borderRadius: 8, fontSize: 12.5, color: "var(--ink)", textDecoration: "none" }}
+                    className="tile"
+                    style={{ display: "flex", alignItems: "baseline", gap: 9, padding: "3px 4px", borderRadius: 7, fontSize: 12.5, color: "var(--ink2)", textDecoration: "none" }}
                   >
-                    <span className={`chip ${todo.tone === "bad" ? "chip-bad" : "chip-warn"}`}>{todo.count}</span>
+                    <span className={`chip ${todo.tone === "bad" ? "chip-bad" : "chip-warn"}`} style={{ flex: "none" }}>
+                      {todo.count}
+                    </span>
                     <span>{t(todo.label)}</span>
                   </Link>
                 ))}
               </div>
-              <Link href="/rekonsiliasi" style={{ display: "inline-block", marginTop: 10, fontSize: 12.5, fontWeight: 500, color: "var(--ledger-dk)", textDecoration: "none" }}>
+              <Link href="/rekonsiliasi" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 13, fontSize: 12.5, fontWeight: 600, color: "var(--ledger-dk)", textDecoration: "none" }}>
                 {t("Buka Rekonsiliasi")} →
               </Link>
             </div>
 
-            <div style={{ border: "1px solid var(--rule)", borderRadius: 12, padding: "14px 16px", background: "var(--paper)" }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, letterSpacing: "-.01em" }}>{t("Laporan Untuk Bank & Investor")}</div>
-              <p style={{ fontSize: 12, color: "var(--ink3)", marginTop: 6, lineHeight: 1.5 }}>
+            <div style={{ borderRadius: 12, padding: "16px 18px", background: "var(--amber-bg)" }}>
+              <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: "-.01em", color: "var(--amber)" }}>
+                {t("Laporan Untuk Bank & Investor")}
+              </div>
+              <p style={{ fontSize: 12.5, color: "var(--amber)", marginTop: 6, lineHeight: 1.5, textWrap: "pretty" }}>
                 {t("Susun paket laporan dari angka buku yang sudah terkunci, lalu ajukan ke Administrator untuk disetujui sebelum diekspor.")}
               </p>
-              <Link href="/laporan-khusus" style={{ display: "inline-block", marginTop: 10, fontSize: 12.5, fontWeight: 500, color: "var(--ledger-dk)", textDecoration: "none" }}>
+              <Link href="/laporan-khusus" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 11, fontSize: 12.5, fontWeight: 600, color: "var(--amber)", textDecoration: "none" }}>
                 {t("Buka Laporan Khusus")} →
               </Link>
             </div>
           </div>
         </div>
 
-        <div style={{ width: "100%", background: "var(--card)", borderRadius: 14, boxShadow: "0 6px 20px rgba(22,32,27,.12)", padding: "18px 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <span style={{ fontSize: 12.5, fontWeight: 600, letterSpacing: "-.01em", textTransform: "uppercase" }}>{t("Daftar Modul")}</span>
+        <div style={{ width: "100%", background: "var(--card)", borderRadius: 14, boxShadow: "0 6px 20px rgba(22,32,27,.12)", padding: "16px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 11 }}>
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--ink4)" }}>
+              {t("Daftar Modul")}
+            </span>
             <button
               onClick={() => setEditing(true)}
               style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 500, color: "var(--ledger-dk)", padding: "3px 8px", borderRadius: 7 }}
@@ -332,36 +483,46 @@ export default function BerandaScreen({
               {t("Edit")}
             </button>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 12 }}>
-            {tiles.map((entry) => (
-              <Link
-                key={entry.key}
-                href={entry.href}
-                className="qtile"
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 11,
-                  padding: "13px 14px",
-                  borderRadius: 11,
-                  textAlign: "left",
-                  border: "1px solid var(--rule)",
-                  background: "var(--card)",
-                  textDecoration: "none",
-                }}
-              >
-                <span style={{ color: "var(--ledger)", flex: "none", marginTop: 1 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <rect x="3" y="4" width="18" height="16" rx="1" />
-                    <path d="M7 9h10M7 13h6M7 17h8" />
-                  </svg>
-                </span>
-                <span>
-                  <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>{t(entry.label)}</span>
-                  {entry.hint && <span style={{ display: "block", fontSize: 11.5, color: "var(--ink3)", marginTop: 2, lineHeight: 1.45 }}>{t(entry.hint)}</span>}
-                </span>
-              </Link>
-            ))}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10 }}>
+            {tiles.map((entry) => {
+              const Icon = GROUP_ICONS[groupOfModule.get(entry.key) ?? ""] ?? IconManajemen;
+              return (
+                <Link
+                  key={entry.key}
+                  href={entry.href}
+                  className="qtile"
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 11,
+                    padding: "13px 14px",
+                    borderRadius: 11,
+                    textAlign: "left",
+                    border: "1px solid var(--rule)",
+                    background: "var(--card)",
+                    textDecoration: "none",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 8,
+                      background: "var(--sunk)",
+                      display: "grid",
+                      placeItems: "center",
+                      flex: "none",
+                    }}
+                  >
+                    <Icon size={16} stroke="var(--ledger-dk)" />
+                  </span>
+                  <span>
+                    <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{t(entry.label)}</span>
+                    {entry.hint && <span style={{ display: "block", fontSize: 11.5, color: "var(--ink3)", marginTop: 2, lineHeight: 1.45 }}>{t(entry.hint)}</span>}
+                  </span>
+                </Link>
+              );
+            })}
             {tiles.length === 0 && <span className="sm muted">{t("Belum ada pintasan. Klik Edit untuk memilih modul.")}</span>}
           </div>
         </div>
@@ -413,6 +574,12 @@ export default function BerandaScreen({
           })}
         </div>
       </Dialog>
+
+      <SettingsDialog
+        open={settings}
+        onClose={() => setSettings(false)}
+        user={{ name: user.name, email: user.email, initials: user.initials }}
+      />
 
       <style>{`.qtile:hover{border-color:var(--ledger)!important;background:var(--ledger-bg)!important}.tile:hover{background:var(--sunk)}`}</style>
     </div>

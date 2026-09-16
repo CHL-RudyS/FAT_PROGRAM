@@ -76,11 +76,6 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { key: "setelan", label: "Setelan Sistem", href: "/setelan", screen: "35", hint: "Penomoran dokumen dan integrasi" },
     ],
   },
-  {
-    key: "setelan-bar",
-    label: "Setelan",
-    items: [{ key: "setup", label: "Setelan Sistem", href: "/setup", screen: "01" }],
-  },
 ];
 
 /** Extra destinations reachable from search or the rail but not in the barcol. */

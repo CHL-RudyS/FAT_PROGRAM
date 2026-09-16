@@ -81,7 +81,6 @@ export const GROUP_ICONS: Record<string, (props: IconProps) => React.ReactElemen
   laporan: IconLaporan,
   manajemen: IconManajemen,
   setelan: IconSetelan,
-  "setelan-bar": IconSetelan,
 };
 
 export function IconAssistant({ size = 19 }: { size?: number }) {

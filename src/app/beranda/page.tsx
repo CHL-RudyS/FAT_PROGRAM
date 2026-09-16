@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getActiveContext } from "@/lib/context";
+import { getActiveContext, initialsOf } from "@/lib/context";
 import { db } from "@/lib/db";
 import BerandaScreen, { type BerandaTodo } from "./BerandaScreen";
 
@@ -50,6 +50,12 @@ export default async function BerandaPage() {
     <BerandaScreen
       company={{ id: context.company.id, name: context.company.name }}
       unit={context.unit}
+      user={{
+        name: context.user.name,
+        email: context.user.email,
+        roleName: context.user.roleName,
+        initials: initialsOf(context.user.name),
+      }}
       todos={todos}
       shortcuts={shortcuts}
       companies={companies.map((company) => ({

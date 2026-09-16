@@ -85,7 +85,7 @@ export async function GET() {
           ? "Terhubung ke database, tetapi tabelnya belum dibuat."
           : "Tidak bisa terhubung ke database.",
         fix: missingTable
-          ? "Build menjalankan `prisma db push`, jadi redeploy biasanya cukup — pastikan DATABASE_URL tersedia saat build."
+          ? "Set SETUP_TOKEN di environment variables, lalu buka /api/setup?token=<nilai itu> — skema dibuat dan diisi dari sana."
           : "Periksa connection string dan apakah database mengizinkan koneksi dari Vercel.",
         detail: message.slice(0, 300),
         checks,

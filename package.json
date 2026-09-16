@@ -4,13 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && (prisma db push || echo '[build] prisma db push gagal \u2014 lanjut build; cek /api/health setelah deploy') && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "build:schema-sql": "prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script > prisma/schema.sql"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
